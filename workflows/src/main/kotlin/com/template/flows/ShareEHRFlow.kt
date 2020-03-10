@@ -1,54 +1,57 @@
 package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.template.contracts.PaymentContract
-import com.template.states.ResponsibilityState
+import com.template.contracts.EHRContract
+import com.template.states.EHRState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ProgressTracker
 
 /**
  * This is the flow which handles issuance of new IOUs on the ledger.
  */
 @InitiatingFlow
 @StartableByRPC
-class ShareEHRFlow(val state: EHRState): FlowLogic<SignedTransaction>() {
+class ShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogic<SignedTransaction>() {
 
     override val progressTracker = ProgressTracker()
 
+    companion object {
+        object CREATING : ProgressTracker.Step("Creating a new EHR")
+        object VERIFYING : ProgressTracker.Step("Verifying EHR")
+        object SIGNING : ProgressTracker.Step("Signing EHR")
+        object FINALISING : ProgressTracker.Step("Sending EHR") {
+            override fun childProgressTracker() = FinalityFlow.tracker()
+        }
+
+        fun tracker() = ProgressTracker(CREATING, SIGNING, VERIFYING, FINALISING)
+    }
+
     @Suspendable
     override fun call(): SignedTransaction {
-//        // Step 1. Get a reference to the notary service on our network and our key pair.
-//        // Note: ongoing work to support multiple notary identities is still in progress.
-//        val notary = serviceHub.networkMapCache.notaryIdentities.first()
-//
-//        // Step 2. Create a new issue command.
-//        // Remember that a command is a CommandData object and a list of CompositeKeys
-//        val createCommand = Command(EHRContract.Commands.Create(), state.participants.map { it.owningKey })
-//
-//        // Step 3. Create a new TransactionBuilder object.
-//        val builder = TransactionBuilder(notary = notary)
-//
-//        // Step 4. Add the iou as an output state, as well as a command to the transaction builder.
-//        builder.addOutputState(state, PaymentContract.PAYMENT_CONTRACT_ID)
-//        builder.addCommand(createCommand)
-//
-//        // Step 5. Verify and sign it with our KeyPair.
-//        builder.verify(serviceHub)
-//        val ptx = serviceHub.signInitialTransaction(builder)
-//
-//        val sessions = (state.participants - ourIdentity).map { initiateFlow(it) }.toSet()
-//        // Step 6. Collect the other party's signature using the SignTransactionFlow.
-//        val stx = subFlow(CollectSignaturesFlow(ptx, sessions))
-//
-//        // Step 7. Assuming no exceptions, we can now finalise the transaction.
-//        return subFlow(FinalityFlow(stx, sessions))
-        val counterpartySession = initiateFlow(counterparty)
-        val counterpartyData = counterpartySession.sendAndReceive<EHRState>("send EHR")
-        counterpartyData.unwrap { msg ->
-            assert(msg == "pong")
+        progressTracker.currentStep = CREATING
+        val originDoctor = serviceHub.myInfo.legalIdentities.first()
+        val notary = serviceHub.networkMapCache.notaryIdentities.first()
+        val createCommand = Command(EHRContract.Commands.Create(), listOf(originDoctor, targetDoctor, patient).map { it.owningKey })
+        val EHRState = EHRState("RandomID", patient, originDoctor, targetDoctor, "Blood Test")
+        val builder = TransactionBuilder(notary = notary)
+        builder.addOutputState(EHRState, EHRContract.EHR_CONTRACT_ID)
+        builder.addCommand(createCommand)
+
+        progressTracker.currentStep = VERIFYING
+        builder.verify(serviceHub)
+
+        progressTracker.currentStep = SIGNING
+        val ptx = serviceHub.signInitialTransaction(builder)
+
+        progressTracker.currentStep = FINALISING
+        val targetSessions = listOf(patient, targetDoctor).map{ initiateFlow(it as Party) }
+        val fullytx = subFlow(CollectSignaturesFlow(ptx, targetSessions))
+        return subFlow(FinalityFlow(fullytx, targetSessions))
     }
 }
 
@@ -61,15 +64,13 @@ class ShareEHRFlowResponder(val counterpartySession: FlowSession): FlowLogic<Sig
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val signedTransactionFlow = object : SignTransactionFlow(flowSession) {
+        val signedTransactionFlow = object : SignTransactionFlow(counterpartySession) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 val output = stx.tx.outputs.single().data
-                "This must be an IOU transaction" using (output is EHRState)
+                "This must be an ERHState" using (output is EHRState)
             }
         }
-
-        val txWeJustSignedId = subFlow(signedTransactionFlow)
-
-        return subFlow(ReceiveFinalityFlow(otherSideSession = flowSession, expectedTxId = txWeJustSignedId.id))
+        val txWeJustSigned = subFlow(signedTransactionFlow)
+        return subFlow(ReceiveFinalityFlow(counterpartySession, txWeJustSigned.id))
     }
 }
