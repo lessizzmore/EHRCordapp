@@ -1,4 +1,4 @@
-package com.template.flows
+package com.template.flows.doctor
 
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRContract
@@ -11,9 +11,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 
-/**
- * This is the flow which handles issuance of new IOUs on the ledger.
- */
 @InitiatingFlow
 @StartableByRPC
 class ShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogic<SignedTransaction>() {

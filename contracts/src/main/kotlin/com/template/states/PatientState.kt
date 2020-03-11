@@ -1,6 +1,6 @@
 package com.template.states
 
-import com.template.contracts.PaymentContract
+import com.template.contracts.PatientContract
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
 import java.util.*
@@ -16,7 +16,7 @@ import java.util.*
  *   the vaults of all parties. Verify methods should check that one input and one output share the id in a transaction,
  *   except at issuance/termination.
  */
-@BelongsToContract(EHRContract::class)
+@BelongsToContract(PatientContract::class)
 data class PatientState(val id: String,
                     val firstName: String,
                     val lastName: String,

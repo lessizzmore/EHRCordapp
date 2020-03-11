@@ -3,7 +3,6 @@ package com.template.states
 import com.template.contracts.EHRContract
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
-import java.util.*
 
 /**
  * The IOU State object, with the following properties:

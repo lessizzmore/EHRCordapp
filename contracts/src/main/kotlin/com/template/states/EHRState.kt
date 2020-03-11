@@ -3,7 +3,11 @@ package com.template.states
 import com.template.contracts.EHRContract
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
-import java.util.*
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.CordaSerializable
+import java.lang.IllegalArgumentException
 
 /**
  * The IOU State object, with the following properties:
@@ -17,25 +21,46 @@ import java.util.*
  *   except at issuance/termination.
  */
 @BelongsToContract(EHRContract::class)
-data class EHRState(val id: String,
-                    val patient: Party,
+data class EHRState (val patient: Party,
                     val originDoctor: Party,
                     val targetDoctor: Party,
-                    val description: String): ContractState {
+                    val description: String,
+                    val status: EHRStateStatus = EHRStateStatus.PENDING,
+                     override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
 
     /**
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
      *  lender or the borrower.
      */
     override val participants: List<Party> get() = listOf(originDoctor, patient, targetDoctor)
-    /**
-     * Helper methods for when building transactions for settling and transferring IOUs.
-     * - [pay] adds an amount to the paid property. It does no validation.
-     * - [withNewMember] creates a copy of the current state with a newly specified lender. For use when transferring.
-     */
 
-//    fun pay(amountToPay: Amount<Currency>) = copy(amount * percentage /100 = amount * percentage.plus(amountToPay))
-//    fun withNewMember(newMember: Party) = copy(member1 = newMember)
 
+    override fun generateMappedObject(schema: net.corda.core.schemas.MappedSchema): net.corda.core.schemas.PersistentState {
+        return when(schema) {
+            is EHRStateSchema -> EHRStateSchema.PersistentEHRState (
+                    patient = patient,
+                    originDoctor = originDoctor,
+                    status = status
+            )
+            else -> throw IllegalArgumentException("Unrecognized schema $schema")
+        }
+    }
+
+    override fun supportedSchemas() = listOf(EHRStateSchema)
+    fun isSuspended() = status == EHRStateStatus.SUSPENDED
+    fun isPending() = status == EHRStateStatus.PENDING
+    fun isActive() = status == EHRStateStatus.ACTIVE
+}
+
+/**
+ * Statuses that a EHRState can go through.
+ *
+ * [PENDING] - newly submitted state, haven't been approved yet. Pending members can't share EHRState with others
+ * [ACTIVE] - active EHRStates can be shared
+ * [SUSPENDED] - Pending members can't share EHRState with others k. Suspended EHRState can be activated back.
+ */
+@CordaSerializable
+enum class EHRStateStatus {
+    PENDING, ACTIVE, SUSPENDED
 }
 
