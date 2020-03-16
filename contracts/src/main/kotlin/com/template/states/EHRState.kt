@@ -32,7 +32,7 @@ data class EHRState (val patient: Party,
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
      *  lender or the borrower.
      */
-    override val participants: List<Party> get() = listOf(originDoctor)
+    override val participants: List<Party> get() = listOf(originDoctor, patient)
 }
 
 /**
