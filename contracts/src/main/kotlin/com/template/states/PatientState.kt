@@ -18,11 +18,12 @@ import java.util.*
  */
 @BelongsToContract(PatientContract::class)
 data class PatientState(val id: String,
-                    val firstName: String,
-                    val lastName: String,
-                    val email: String,
-                    val dob: String,
-                    val EHRs: List<EHRState>): ContractState {
+                        val firstName: String,
+                        val lastName: String,
+                        val email: String,
+                        val dob: String,
+                        val EHRs: List<LinearPointer<EHRState>>,
+                        override val linearId: UniqueIdentifier): LinearState {
 
     /**
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the

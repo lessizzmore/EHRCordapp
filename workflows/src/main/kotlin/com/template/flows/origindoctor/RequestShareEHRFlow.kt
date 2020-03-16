@@ -16,7 +16,7 @@ class RequestShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogi
 
 
     companion object {
-        object SENDING_EHR_DATA_TO_PATIENT : ProgressTracker.Step("Sending EHR data to patient")
+        object SENDING_EHR_DATA_TO_PATIENT : ProgressTracker.Step("Sending EHR agreement to patient")
         object ACCEPTING_INCOMING_PENDING_EHR : ProgressTracker.Step("Accepting incoming pending EHR")
 
         fun tracker() = ProgressTracker(

@@ -1,13 +1,13 @@
 package com.template.contracts
 
-import com.template.states.EHRState
-import com.template.states.EHRStateStatus
+import com.template.states.EHRAgreementState
+import com.template.states.EHRAgreementStateStatus
 import net.corda.core.contracts.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 
 
-class EHRContract : Contract {
+class EHRAgreementContract : Contract {
     companion object {
         const val EHR_CONTRACT_ID = "com.template.contracts.EHRContract"
     }
@@ -21,29 +21,29 @@ class EHRContract : Contract {
 
     override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Commands>()
-        val output = tx.outputs.single {it.data is EHRState}
-        val outputEHR = output.data as EHRState
-        val inputEHR = tx.inputsOfType<EHRState>().single()
+        val output = tx.outputs.single {it.data is EHRAgreementState }
+        val outputEHR = output.data as EHRAgreementState
+        val inputEHR = tx.inputsOfType<EHRAgreementState>().single()
         when (command.value) {
             is Commands.Create -> requireThat {
-                "No inputs should be consumed when issuing a EHRState." using (tx.inputs.isEmpty())
+                "No inputs should be consumed when issuing a EHRAgreementState." using (tx.inputs.isEmpty())
                 "Only one output state should be created when creating a EHRState." using (tx.outputs.size == 1)
-                "Creating a EHRState should contain an output in PENDING status." using (outputEHR.status == EHRStateStatus.PENDING)
+                "Creating a EHRAgreementState should contain an output in PENDING status." using (outputEHR.status == EHRAgreementStateStatus.PENDING)
             }
             is Commands.Suspend -> requireThat {
                 "Only patient should sign a suspension transaction" using (command.signers.toSet() == setOf(outputEHR.patient.owningKey))
-                "Input state of a suspension transaction shouldn't be already suspended" using (inputEHR.status != EHRStateStatus.SUSPENDED)
-                "Output state of a suspension transaction should be suspended" using (outputEHR.status != EHRStateStatus.PENDING)
+                "Input state of a suspension transaction shouldn't be already suspended" using (inputEHR.status != EHRAgreementStateStatus.SUSPENDED)
+                "Output state of a suspension transaction should be suspended" using (outputEHR.status != EHRAgreementStateStatus.PENDING)
             }
             is Commands.Activate -> requireThat {
                 "Only patient should sign a EHR activation transaction" using (command.signers.toSet() == setOf(outputEHR.patient.owningKey))
-                "Input state of a EHR activation transaction shouldn't be already active" using (inputEHR.status != EHRStateStatus.ACTIVE)
-                "Output state of a EHR activation transaction should be active" using (outputEHR.status == EHRStateStatus.ACTIVE)
+                "Input state of a EHR activation transaction shouldn't be already active" using (inputEHR.status != EHRAgreementStateStatus.ACTIVE)
+                "Output state of a EHR activation transaction should be active" using (outputEHR.status == EHRAgreementStateStatus.ACTIVE)
             }
             is Commands.Share -> requireThat {
-                val output = tx.outputsOfType<EHRState>().single()
+                val output = tx.outputsOfType<EHRAgreementState>().single()
                 "Patient is a required signer" using (command.signers.contains(output.patient.owningKey))
-                "Only one output state should be created when issuing a EHRState." using (tx.outputs.size == 1)
+                "Only one output state should be created when issuing a EHRAgreementState." using (tx.outputs.size == 1)
             }
 
         }
