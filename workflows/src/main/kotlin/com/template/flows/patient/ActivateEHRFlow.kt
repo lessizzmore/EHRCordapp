@@ -33,7 +33,7 @@ open class ActivateEHRFlow(val EHR: StateAndRef<EHRState>) : FlowLogic<SignedTra
         subFlow(FinalityFlow(selfSignedTx, listOf(originDoctorSession)))
 
         // We should notify origin doctor about changes with the ACTIVATED EHR
-        subFlow(NotifyDoctorFlow("EHR approved by patient and is now active"))
+        subFlow(NotifyOriginDoctorFlow("EHR approved by patient and is now active", EHR.state.data.originDoctor))
 
         return selfSignedTx
     }

@@ -6,10 +6,8 @@ import com.template.states.EHRState
 import com.template.states.EHRStateStatus
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.*
-import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ProgressTracker
 
 @StartableByRPC
 @InitiatingFlow
@@ -32,7 +30,7 @@ open class SuspendEHRFlow(val EHR: StateAndRef<EHRState>) : FlowLogic<SignedTran
         val finalisedTx = subFlow(FinalityFlow(selfSignedTx, doctorOriginSession))
 
         // sending notification to the origin doctor about suspension
-        subFlow(NotifyDoctorFlow("EHR suspended by patient"))
+        subFlow(NotifyOriginDoctorFlow("EHR suspended by patient", EHR.state.data.originDoctor))
         return finalisedTx
     }
 }
