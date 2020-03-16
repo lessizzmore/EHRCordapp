@@ -1,10 +1,9 @@
-package com.template.flows.doctor
+package com.template.flows.origindoctor
 
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRContract
 import com.template.states.EHRState
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -62,13 +61,8 @@ class RequestShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogi
         }
 
         progressTracker.currentStep = ACCEPTING_INCOMING_PENDING_EHR
-        if (ourIdentity != patient) {
-            val selfSignedTx = subFlow(signResponder)
-            return selfSignedTx
-        } else {
-            return patientSession.receive<SignedTransaction>().unwrap {it}
-        }
-
+        val selfSignedTx = subFlow(signResponder)
+        return selfSignedTx
     }
 }
 

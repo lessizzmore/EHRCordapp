@@ -1,4 +1,4 @@
-package com.template.flows.doctor
+package com.template.flows.origindoctor
 
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRContract
@@ -34,7 +34,7 @@ class ShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogic<Signe
         val originDoctor = serviceHub.myInfo.legalIdentities.first()
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         val createCommand = Command(EHRContract.Commands.Create(), listOf(originDoctor, targetDoctor, patient).map { it.owningKey })
-        val EHRState = EHRState("RandomID", patient, originDoctor, targetDoctor, "Blood Test")
+        val EHRState = EHRState(patient, originDoctor, targetDoctor, "Blood Test")
         val builder = TransactionBuilder(notary = notary)
         builder.addOutputState(EHRState, EHRContract.EHR_CONTRACT_ID)
         builder.addCommand(createCommand)
