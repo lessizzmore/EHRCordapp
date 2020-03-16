@@ -26,38 +26,21 @@ data class EHRState (val patient: Party,
                     val targetDoctor: Party,
                     val description: String,
                     val status: EHRStateStatus = EHRStateStatus.PENDING,
-                     override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
+                    val linearId: UniqueIdentifier = UniqueIdentifier()) : ContractState {
 
     /**
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
      *  lender or the borrower.
      */
-    override val participants: List<Party> get() = listOf(originDoctor, patient, targetDoctor)
-
-
-    override fun generateMappedObject(schema: net.corda.core.schemas.MappedSchema): net.corda.core.schemas.PersistentState {
-        return when(schema) {
-            is EHRStateSchema -> EHRStateSchema.PersistentEHRState (
-                    patient = patient,
-                    originDoctor = originDoctor,
-                    status = status
-            )
-            else -> throw IllegalArgumentException("Unrecognized schema $schema")
-        }
-    }
-
-    override fun supportedSchemas() = listOf(EHRStateSchema)
-    fun isSuspended() = status == EHRStateStatus.SUSPENDED
-    fun isPending() = status == EHRStateStatus.PENDING
-    fun isActive() = status == EHRStateStatus.ACTIVE
+    override val participants: List<Party> get() = listOf(originDoctor)
 }
 
 /**
  * Statuses that a EHRState can go through.
  *
- * [PENDING] - newly submitted state, haven't been approved yet. Pending members can't share EHRState with others
+ * [PENDING] - newly submitted state, haven't been approved yet. Pending originDoctor can't share EHRState with others
  * [ACTIVE] - active EHRStates can be shared
- * [SUSPENDED] - Pending members can't share EHRState with others k. Suspended EHRState can be activated back.
+ * [SUSPENDED] - Pending originDoctor can't share suspended EHRState with others
  */
 @CordaSerializable
 enum class EHRStateStatus {
