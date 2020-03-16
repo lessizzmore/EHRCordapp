@@ -3,11 +3,7 @@ package com.template.states
 import com.template.contracts.EHRContract
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
-import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.PersistentState
-import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
-import java.lang.IllegalArgumentException
 
 /**
  * The IOU State object, with the following properties:
@@ -33,6 +29,8 @@ data class EHRState (val patient: Party,
      *  lender or the borrower.
      */
     override val participants: List<Party> get() = listOf(originDoctor, patient)
+
+
 }
 
 /**

@@ -28,7 +28,7 @@ data class PatientState(val id: String,
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
      *  lender or the borrower.
      */
-    override val participants: List<Party> get() = listOf(member, pool)
+    override val participants: List<Party> get() = listOf()
 
     /**
      * Helper methods for when building transactions for settling and transferring IOUs.
