@@ -1,6 +1,6 @@
 package com.template.contracts
 
-import com.template.states.EHRState
+import com.template.states.EHRShareAgreementState
 import net.corda.core.contracts.*
 import net.corda.core.transactions.LedgerTransaction
 
@@ -24,7 +24,7 @@ class DoctorContract : Contract {
             }
 
             is Commands.Share -> requireThat {
-                val output = tx.outputsOfType<EHRState>().single()
+                val output = tx.outputsOfType<EHRShareAgreementState>().single()
                 "Patient is a required signer" using (command.signers.contains(output.patient.owningKey))
                 "Only one output state should be created when issuing a EHRState." using (tx.outputs.size == 1)
             }

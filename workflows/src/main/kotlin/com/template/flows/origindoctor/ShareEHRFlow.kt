@@ -1,8 +1,8 @@
 package com.template.flows.origindoctor
 
 import co.paralleluniverse.fibers.Suspendable
-import com.template.contracts.EHRContract
-import com.template.states.EHRState
+import com.template.contracts.EHRShareAgreementContract
+import com.template.states.EHRShareAgreementState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
@@ -33,10 +33,10 @@ class ShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogic<Signe
         progressTracker.currentStep = CREATING
         val originDoctor = serviceHub.myInfo.legalIdentities.first()
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        val createCommand = Command(EHRContract.Commands.Create(), listOf(originDoctor, targetDoctor, patient).map { it.owningKey })
-        val EHRState = EHRState(patient, originDoctor, targetDoctor, "Blood Test")
+        val createCommand = Command(EHRShareAgreementContract.Commands.Create(), listOf(originDoctor, targetDoctor, patient).map { it.owningKey })
+        val EHRState = EHRShareAgreementState(patient, originDoctor, targetDoctor, "Blood Test")
         val builder = TransactionBuilder(notary = notary)
-        builder.addOutputState(EHRState, EHRContract.EHR_CONTRACT_ID)
+        builder.addOutputState(EHRState, EHRShareAgreementContract.EHR_CONTRACT_ID)
         builder.addCommand(createCommand)
 
         progressTracker.currentStep = VERIFYING
@@ -64,7 +64,7 @@ class ShareEHRFlowResponder(val counterpartySession: FlowSession): FlowLogic<Sig
         val signedTransactionFlow = object : SignTransactionFlow(counterpartySession) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 val output = stx.tx.outputs.single().data
-                "This must be an ERHState" using (output is EHRState)
+                "This must be an ERHState" using (output is EHRShareAgreementState)
             }
         }
         val txWeJustSigned = subFlow(signedTransactionFlow)

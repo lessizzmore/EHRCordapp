@@ -1,6 +1,6 @@
 package com.template.states
 
-import com.template.contracts.EHRContract
+import com.template.contracts.EHRShareAgreementContract
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
 
@@ -15,12 +15,12 @@ import net.corda.core.identity.Party
  *   the vaults of all parties. Verify methods should check that one input and one output share the id in a transaction,
  *   except at issuance/termination.
  */
-@BelongsToContract(EHRContract::class)
+@BelongsToContract(EHRShareAgreementContract::class)
 data class DoctorState(val id: String,
                     val firstName: String,
                     val lastName: String,
                     val patients: List<Party>,
-                    val EHRs: List<EHRState>
+                    val EHRs: List<EHRShareAgreementState>
                     ): ContractState {
 
     /**
@@ -28,14 +28,6 @@ data class DoctorState(val id: String,
      *  lender or the borrower.
      */
     override val participants: List<Party> get() = listOf()
-
-    /**
-     * Helper methods for when building transactions for settling and transferring IOUs.
-     * - [pay] adds an amount to the paid property. It does no validation.
-     * - [withNewMember] creates a copy of the current state with a newly specified lender. For use when transferring.
-     */
-//    fun pay(amountToPay: Amount<Currency>) = copy(amount * percentage /100 = amount * percentage.plus(amountToPay))
-//    fun withNewMember(newMember: Party) = copy(member1 = newMember)
 
 }
 

@@ -1,9 +1,9 @@
 package com.template.flows.patient
 
 import co.paralleluniverse.fibers.Suspendable
-import com.template.contracts.EHRContract
-import com.template.states.EHRState
-import com.template.states.EHRStateStatus
+import com.template.contracts.EHRShareAgreementContract
+import com.template.states.EHRShareAgreementState
+import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
@@ -11,7 +11,7 @@ import net.corda.core.transactions.TransactionBuilder
 
 @StartableByRPC
 @InitiatingFlow
-open class SuspendEHRFlow(val EHR: StateAndRef<EHRState>) : FlowLogic<SignedTransaction>() {
+open class SuspendEHRFlow(val EHR: StateAndRef<EHRShareAgreementState>) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -19,8 +19,8 @@ open class SuspendEHRFlow(val EHR: StateAndRef<EHRState>) : FlowLogic<SignedTran
         // build suspension transaction
         val builder = TransactionBuilder(notary)
                 .addInputState(EHR)
-                .addOutputState(EHR.state.data.copy(status = EHRStateStatus.SUSPENDED))
-                .addCommand(EHRContract.Commands.Suspend(), ourIdentity.owningKey)
+                .addOutputState(EHR.state.data.copy(status = EHRShareAgreementStateStatus.SUSPENDED))
+                .addCommand(EHRShareAgreementContract.Commands.Suspend(), ourIdentity.owningKey)
 
         builder.verify(serviceHub)
         val selfSignedTx = serviceHub.signInitialTransaction(builder)

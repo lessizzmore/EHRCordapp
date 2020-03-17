@@ -1,8 +1,8 @@
 package com.template.flows.origindoctor
 
 import co.paralleluniverse.fibers.Suspendable
-import com.template.contracts.EHRContract
-import com.template.states.EHRState
+import com.template.contracts.EHRShareAgreementContract
+import com.template.states.EHRShareAgreementState
 import net.corda.core.contracts.Command
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -33,22 +33,22 @@ class RequestShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogi
         progressTracker.currentStep = SENDING_EHR_DATA_TO_PATIENT
         val patientSession = initiateFlow(patient)
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        val createCommand = Command(EHRContract.Commands.Create(), listOf(ourIdentity, targetDoctor, patient).map { it.owningKey })
-        val EHRState = EHRState(patient, ourIdentity, targetDoctor, "Blood Test")
+        val createCommand = Command(EHRShareAgreementContract.Commands.Create(), listOf(ourIdentity, targetDoctor, patient).map { it.owningKey })
+        val EHRState = EHRShareAgreementState(patient, ourIdentity, targetDoctor, "Blood Test")
         val builder = TransactionBuilder(notary = notary)
-        builder.addOutputState(EHRState, EHRContract.EHR_CONTRACT_ID)
+        builder.addOutputState(EHRState, EHRShareAgreementContract.EHR_CONTRACT_ID)
         builder.addCommand(createCommand)
         patientSession.send(builder)
         val signResponder = object : SignTransactionFlow(patientSession) {
             override fun checkTransaction(stx: SignedTransaction) {
                 val command = stx.tx.commands.single()
-                if (command.value !is EHRContract.Commands.Create) {
+                if (command.value !is EHRShareAgreementContract.Commands.Create) {
                     throw FlowException("Only create command is allowed")
                 }
 
                 val output = stx.tx.outputs.single()
 
-                val EHRState = output.data as EHRState
+                val EHRState = output.data as EHRShareAgreementState
                 if (patient != EHRState.patient) {
                     throw IllegalArgumentException("Wrong patient identity")
                 }

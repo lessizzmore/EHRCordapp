@@ -1,19 +1,19 @@
 package com.template.states
 
-import com.template.contracts.EHRAgreementContract
+import com.template.contracts.EHRShareAgreementContract
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.contracts.LinearState as LinearState
 
-@BelongsToContract(EHRAgreementContract::class)
-data class EHRAgreementState (val patient: Party,
+@BelongsToContract(EHRShareAgreementContract::class)
+data class EHRShareAgreementState (val patient: Party,
                      val originDoctor: Party,
                      val targetDoctor: Party,
                      val description: String? = null,
                      val attachmentHash: SecureHash? = null,
-                     val status: EHRAgreementStateStatus = EHRAgreementStateStatus.PENDING,
+                     val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,
                      override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState {
 
     /**
@@ -33,7 +33,7 @@ data class EHRAgreementState (val patient: Party,
  * [SUSPENDED] - Pending originDoctor can't share suspended EHRAgreementStates with others
  */
 @CordaSerializable
-enum class EHRAgreementStateStatus {
+enum class EHRShareAgreementStateStatus {
     PENDING, ACTIVE, SUSPENDED
 }
 

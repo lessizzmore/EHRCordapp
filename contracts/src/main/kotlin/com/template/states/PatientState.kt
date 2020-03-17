@@ -22,7 +22,7 @@ data class PatientState(val id: String,
                         val lastName: String,
                         val email: String,
                         val dob: String,
-                        val EHRs: List<LinearPointer<EHRState>>,
+                        val EHRs: List<LinearPointer<EHRShareAgreementState>>,
                         override val linearId: UniqueIdentifier): LinearState {
 
     /**
@@ -30,14 +30,6 @@ data class PatientState(val id: String,
      *  lender or the borrower.
      */
     override val participants: List<Party> get() = listOf()
-
-    /**
-     * Helper methods for when building transactions for settling and transferring IOUs.
-     * - [pay] adds an amount to the paid property. It does no validation.
-     * - [withNewMember] creates a copy of the current state with a newly specified lender. For use when transferring.
-     */
-//    fun pay(amountToPay: Amount<Currency>) = copy(amount * percentage /100 = amount * percentage.plus(amountToPay))
-//    fun withNewMember(newMember: Party) = copy(member1 = newMember)
 
 }
 

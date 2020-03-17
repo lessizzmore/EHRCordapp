@@ -1,22 +1,20 @@
 package com.template.flows.patient
 
 import co.paralleluniverse.fibers.Suspendable
-import com.template.contracts.EHRContract
-import com.template.states.EHRState
-import com.template.states.EHRStateStatus
+import com.template.contracts.EHRShareAgreementContract
+import com.template.states.EHRShareAgreementState
+import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ProgressTracker
 
 @StartableByRPC
 @InitiatingFlow
-open class ActivateEHRFlow(val EHR: StateAndRef<EHRState>) : FlowLogic<SignedTransaction>() {
+open class ActivateEHRFlow(val EHR: StateAndRef<EHRShareAgreementState>) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -24,8 +22,8 @@ open class ActivateEHRFlow(val EHR: StateAndRef<EHRState>) : FlowLogic<SignedTra
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         val builder = TransactionBuilder(notary)
                 .addInputState(EHR)
-                .addOutputState(EHR.state.data.copy(status = EHRStateStatus.ACTIVE), EHRContract.EHR_CONTRACT_ID)
-                .addCommand(EHRContract.Commands.Activate(), ourIdentity.owningKey)
+                .addOutputState(EHR.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
+                .addCommand(EHRShareAgreementContract.Commands.Activate(), ourIdentity.owningKey)
         builder.verify(serviceHub)
         val selfSignedTx = serviceHub.signInitialTransaction(builder)
 
