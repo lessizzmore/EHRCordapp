@@ -2,7 +2,7 @@ package com.template.flows.patient
 
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRShareAgreementContract
-import com.template.flows.origindoctor.RequestShareEHRFlow
+import com.template.flows.origindoctor.RequestShareEHRAgreementFlow
 import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.flows.*
@@ -11,8 +11,8 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
 
 
-@InitiatedBy(RequestShareEHRFlow::class)
-open class RequestShareEHRFlowResponder(val counterpartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+@InitiatedBy(RequestShareEHRAgreementFlow::class)
+open class RequestShareEHRAgreementFlowResponder(val counterpartySession: FlowSession) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
