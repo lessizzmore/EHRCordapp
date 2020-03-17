@@ -96,7 +96,7 @@ dependencies {
 
 cordapp {
     info {
-        name "CorDapp Template"
+        name "EHR Sharing Agreement"
         vendor "Corda Open Source"
         targetPlatformVersion corda_platform_version
         minimumPlatformVersion corda_platform_version
@@ -112,7 +112,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapp project(':workflows')
     }
     node {
-        name "O=Notary,L=London,C=GB"
+        name "O=Notary,L=New York,C=US"
         notary = [validating : false]
         p2pPort 10002
         rpcSettings {
@@ -121,7 +121,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         }
     }
     node {
-        name "O=PartyA,L=London,C=GB"
+        name "O=PartyA,L=New York,C=US,CN=Patient"
         p2pPort 10005
         rpcSettings {
             address("localhost:10006")
@@ -130,11 +130,20 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
     }
     node {
-        name "O=PartyB,L=New York,C=US"
+        name "O=PartyB,L=New York,C=US,CN=OriginDoctor"
         p2pPort 10008
         rpcSettings {
             address("localhost:10009")
             adminAddress("localhost:10049")
+        }
+        rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+    node {
+        name "O=PartyC,L=New York,C=US,CN=TargetDoctor"
+        p2pPort 10011
+        rpcSettings {
+            address("localhost:10010")
+            adminAddress("localhost:10050")
         }
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
     }
