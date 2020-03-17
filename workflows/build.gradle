@@ -5,7 +5,7 @@ cordapp {
     targetPlatformVersion corda_platform_version
     minimumPlatformVersion corda_platform_version
     workflow {
-        name "Template Flows"
+        name "EHR Sharing Agreement Flows"
         vendor "Corda Open Source"
         licence "Apache License, Version 2.0"
         versionId 1
@@ -53,6 +53,15 @@ dependencies {
 
     cordapp "$corda_release_group:corda-finance-contracts:$corda_release_version"
     cordapp "$corda_release_group:corda-finance-workflows:$corda_release_version"
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        languageVersion = "1.2"
+        apiVersion = "1.2"
+        jvmTarget = "1.8"
+        javaParameters = true   // Useful for reflection.
+    }
 }
 
 task integrationTest(type: Test, dependsOn: []) {
