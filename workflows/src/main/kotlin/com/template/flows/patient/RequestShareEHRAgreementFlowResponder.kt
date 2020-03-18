@@ -18,7 +18,7 @@ open class RequestShareEHRAgreementFlowResponder(val counterpartySession: FlowSe
     override fun call(): SignedTransaction {
         val request = counterpartySession.receive<EHRShareAgreementState>().unwrap { it }
         val originDoctor = counterpartySession.counterparty
-        val EHRState = EHRShareAgreementState(ourIdentity, originDoctor,request.targetDoctor, request.description,null, EHRShareAgreementStateStatus.PENDING)
+        val eHRShareAgreementState = EHRShareAgreementState(ourIdentity, originDoctor,request.targetDoctor, ,null, EHRShareAgreementStateStatus.PENDING)
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
         // issuing PENDING EHRState onto the ledger
