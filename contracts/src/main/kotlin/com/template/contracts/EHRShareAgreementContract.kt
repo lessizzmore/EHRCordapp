@@ -17,6 +17,7 @@ class EHRShareAgreementContract : Contract {
         class Suspend : TypeOnlyCommandData(), Commands
         class Activate : TypeOnlyCommandData(), Commands
         class Share : TypeOnlyCommandData(), Commands
+        class Delete : TypeOnlyCommandData(), Commands
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -30,6 +31,7 @@ class EHRShareAgreementContract : Contract {
             is Commands.Suspend -> verifySuspend(tx, setOfSigners)
             is Commands.Activate -> verifyActive(tx, setOfSigners)
             is Commands.Share -> verifyShare(tx, setOfSigners)
+            if Commands.Delete -> verifyDelete(tx, setOfSigners)
             else -> throw IllegalArgumentException("Unrecognized command.")
         }
     }
@@ -71,4 +73,13 @@ class EHRShareAgreementContract : Contract {
         "Patient is a required signer" using (command.signers.contains(outputEHR.patient.owningKey))
         "Only one output state should be created when issuing a EHRAgreementState." using (tx.outputs.size == 1)
     }
+
+    private fun verifyDelete(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+        val ehrShareAgreementInputs = tx.inputsOfType<EHRShareAgreementState>()
+        "There must be one and only input media asset." using (ehrShareAgreementInputs.size == 1)
+        val inputMediaAsset = ehrShareAgreementInputs.single()
+        "No output states should be produced when deleting a EHRSharingAgreement." using (tx.outputStates.isEmpty())
+        "Originator of the EHRShareAgreement must sign the clear transaction." using (signers == inputMediaAsset.originDoctor.owningKey)
+    }
+
 }
