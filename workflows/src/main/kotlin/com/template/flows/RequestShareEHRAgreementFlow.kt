@@ -35,7 +35,7 @@ class RequestShareEHRAgreementFlow(val patient: Party, val targetDoctor: Party):
     override fun call(): SignedTransaction {
         progressTracker.currentStep = CREATING_EHR_SHARE_AGREEMENT
         val notary = serviceHub.networkMapCache.notaryIdentities.first() //TODO code into config instead of getting the first()
-        val createCommand = Command(EHRShareAgreementContract.Commands.Create(), listOf(ourIdentity).map { it.owningKey })
+        val createCommand = Command(EHRShareAgreementContract.Commands.Create(), listOf(ourIdentity, patient).map { it.owningKey })
 
 
         // create output EHRShareAgreementState
