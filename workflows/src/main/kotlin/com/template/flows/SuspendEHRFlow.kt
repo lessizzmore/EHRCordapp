@@ -51,7 +51,7 @@ open class SuspendEHRFlow(val EHR: StateAndRef<EHRShareAgreementState>) : FlowLo
     }
 }
 
-@InitiatedBy(ActivateEHRFlow::class)
+@InitiatedBy(SuspendEHRFlow::class)
 class SuspendEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
