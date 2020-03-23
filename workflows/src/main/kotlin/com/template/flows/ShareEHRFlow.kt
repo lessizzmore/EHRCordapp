@@ -1,61 +1,48 @@
-package com.template.flows.origindoctor
+package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
+import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ProgressTracker
 
 @InitiatingFlow
 @StartableByRPC
 class ShareEHRFlow(val patient: Party, val targetDoctor: Party): FlowLogic<SignedTransaction>() {
 
-    override val progressTracker = ProgressTracker()
-
-    companion object {
-        object CREATING : ProgressTracker.Step("Creating a new EHR")
-        object VERIFYING : ProgressTracker.Step("Verifying EHR")
-        object SIGNING : ProgressTracker.Step("Signing EHR")
-        object FINALISING : ProgressTracker.Step("Sending EHR") {
-            override fun childProgressTracker() = FinalityFlow.tracker()
-        }
-
-        fun tracker() = ProgressTracker(CREATING, SIGNING, VERIFYING, FINALISING)
-    }
-
     @Suspendable
     override fun call(): SignedTransaction {
-        progressTracker.currentStep = CREATING
+        // get input state
+        val queryCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
+        val ehrStateRefToShare = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.single()
+
         val originDoctor = serviceHub.myInfo.legalIdentities.first()
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        val createCommand = Command(EHRShareAgreementContract.Commands.Create(), listOf(originDoctor, targetDoctor, patient).map { it.owningKey })
-        val EHRState = EHRShareAgreementState(patient, originDoctor, targetDoctor, "Blood Test")
-        val builder = TransactionBuilder(notary = notary)
-        builder.addOutputState(EHRState, EHRShareAgreementContract.EHR_CONTRACT_ID)
-        builder.addCommand(createCommand)
 
-        progressTracker.currentStep = VERIFYING
+        // build tx with 1 input and 0 output
+        val shareCommand = Command(EHRShareAgreementContract.Commands.Share(), listOf(originDoctor, targetDoctor, patient).map { it.owningKey })
+        val builder = TransactionBuilder(notary = notary)
+        builder.addInputState(ehrStateRefToShare)
+        builder.addCommand(shareCommand)
+
         builder.verify(serviceHub)
 
-        progressTracker.currentStep = SIGNING
         val ptx = serviceHub.signInitialTransaction(builder)
-
-        progressTracker.currentStep = FINALISING
-        val targetSessions = listOf(patient, targetDoctor).map{ initiateFlow(it as Party) }
-        val fullytx = subFlow(CollectSignaturesFlow(ptx, targetSessions))
-        return subFlow(FinalityFlow(fullytx, targetSessions))
+        val targetSession = initiateFlow(targetDoctor)
+        val stx = subFlow(CollectSignaturesFlow(ptx, listOf(targetSession)))
+        return subFlow(FinalityFlow(stx, targetSession))
     }
 }
 
-/**
- * This is the flow which signs IOU issuances.
- * The signing is handled by the [SignTransactionFlow].
- */
+
 @InitiatedBy(ShareEHRFlow::class)
 class ShareEHRFlowResponder(val counterpartySession: FlowSession): FlowLogic<SignedTransaction>() {
 
@@ -65,6 +52,10 @@ class ShareEHRFlowResponder(val counterpartySession: FlowSession): FlowLogic<Sig
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 val output = stx.tx.outputs.single().data
                 "This must be an ERHState" using (output is EHRShareAgreementState)
+                val ehrShareAgreementState =
+                        stx.coreTransaction.outputStates.single() as EHRShareAgreementState
+                "EHRShareAgreement sent to the wrong person" using (ehrShareAgreementState.originDoctor == ourIdentity)
+                "Only Activated EHRShareAgreement will be accepted" using (ehrShareAgreementState.status.equals(EHRShareAgreementStateStatus.ACTIVE))
             }
         }
         val txWeJustSigned = subFlow(signedTransactionFlow)

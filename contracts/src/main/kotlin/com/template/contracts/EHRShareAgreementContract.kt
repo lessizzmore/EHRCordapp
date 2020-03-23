@@ -31,7 +31,7 @@ class EHRShareAgreementContract : Contract {
             is Commands.Suspend -> verifySuspend(tx, setOfSigners)
             is Commands.Activate -> verifyActive(tx, setOfSigners)
             is Commands.Share -> verifyShare(tx, setOfSigners)
-            if Commands.Delete -> verifyDelete(tx, setOfSigners)
+            is Commands.Delete -> verifyDelete(tx, setOfSigners)
             else -> throw IllegalArgumentException("Unrecognized command.")
         }
     }
