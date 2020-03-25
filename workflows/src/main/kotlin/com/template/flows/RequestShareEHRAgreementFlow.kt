@@ -15,7 +15,7 @@ import net.corda.core.utilities.unwrap
 
 @InitiatingFlow
 @StartableByRPC
-class RequestShareEHRAgreementFlow(val patient: Party, val targetDoctor: Party): FlowLogic<SignedTransaction>() {
+class RequestShareEHRAgreementFlow(val patient: Party): FlowLogic<SignedTransaction>() {
 
 
     companion object {
@@ -39,7 +39,7 @@ class RequestShareEHRAgreementFlow(val patient: Party, val targetDoctor: Party):
 
 
         // create output EHRShareAgreementState
-        val initialEHRShareAgreementState = EHRShareAgreementState(patient, ourIdentity, targetDoctor, "blood test result", null)
+        val initialEHRShareAgreementState = EHRShareAgreementState(patient, ourIdentity, "blood test result")
 
 
         // create tx builder. add output state and command

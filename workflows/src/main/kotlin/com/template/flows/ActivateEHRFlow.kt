@@ -4,9 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
+import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
+import net.corda.core.identity.Party
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
@@ -18,36 +23,43 @@ import net.corda.core.transactions.TransactionBuilder
  */
 @StartableByRPC
 @InitiatingFlow
-class ActivateEHRFlow(val EHR: StateAndRef<EHRShareAgreementState>) : FlowLogic<SignedTransaction>() {
+class ActivateEHRFlow(val targetDoctor: Party) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
-        // Ensure we are the patient.
-        check(EHR.state.data.patient != ourIdentity) {
-            throw FlowException("Activate EHRShareAgreementState flow must be initiated by patient.")
-        }
 
+        // get input state
+        val queryCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
+        val ehrStateRefToActivate = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.single()
+
+//        // Ensure we are the patient.
+//        check(ehrStateRefToActivate.state.data.patient != ourIdentity) {
+//            throw FlowException("Activate EHRShareAgreementState flow Party must be initiated by patient.")
+//        }
+
+        val activateCommand = Command(EHRShareAgreementContract.Commands.Activate(), listOf(ourIdentity, targetDoctor).map { it.owningKey })
 
         // Create activation tx
         val notary = serviceHub.networkMapCache.notaryIdentities.first() //TODO
         val builder = TransactionBuilder(notary)
-                .addInputState(EHR)
-                .addOutputState(EHR.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
-                .addCommand(EHRShareAgreementContract.Commands.Activate(), ourIdentity.owningKey)
+                .addInputState(ehrStateRefToActivate)
+                .addOutputState(ehrStateRefToActivate.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
+                .addCommand(activateCommand)
 
 
 
         // Verify and sign the tx
         builder.verify(serviceHub)
-        val selfSignedTx = serviceHub.signInitialTransaction(builder)
+        val ptx = serviceHub.signInitialTransaction(builder)
 
 
         // Sends selfSignedTx to origin doctor
-        val targetSession = initiateFlow(EHR.state.data.originDoctor)
+        val targetSession = initiateFlow(targetDoctor)
+        val stx = subFlow(CollectSignaturesFlow(ptx, listOf(targetSession)))
 
 
-        // Finalize transaction, origin doctor doesn't need to sign
-        return subFlow(FinalityFlow(selfSignedTx, listOf(targetSession)))
+        // collect signature from originDoctor and finalize the tx
+        return subFlow(FinalityFlow(stx, listOf(targetSession)))
     }
 }
 

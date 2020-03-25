@@ -7,10 +7,11 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.contracts.LinearState as LinearState
 
+
+// target doctor is an observer
 @BelongsToContract(EHRShareAgreementContract::class)
 data class EHRShareAgreementState (val patient: Party,
                      val originDoctor: Party,
-                     val targetDoctor: Party? = null,
                      val note: String? = null,
                      val attachmentHash: SecureHash? = null,
                      val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,
@@ -20,7 +21,7 @@ data class EHRShareAgreementState (val patient: Party,
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
      *  lender or the borrower.
      */
-    override val participants: List<Party> get() = listOf(originDoctor, patient)
+    override val participants: List<Party> get() = listOfNotNull(originDoctor, patient)
 
 
 }

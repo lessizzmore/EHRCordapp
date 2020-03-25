@@ -7,7 +7,7 @@ import net.corda.core.transactions.LedgerTransaction
 
 class PatientContract : Contract {
     companion object {
-        const val EHR_CONTRACT_ID = "com.template.contracts.EHRContract"
+        const val EHR_CONTRACT_ID = "com.template.contracts.EHRShareAgreementContract"
     }
 
     interface Commands : CommandData {
