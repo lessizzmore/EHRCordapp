@@ -35,6 +35,6 @@ data class EHRShareAgreementState (val patient: Party,
  */
 @CordaSerializable
 enum class EHRShareAgreementStateStatus {
-    PENDING, ACTIVE, SUSPENDED
+    PENDING, ACTIVE, SUSPENDED, SHARED
 }
 

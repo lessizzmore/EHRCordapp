@@ -50,7 +50,7 @@ class EHRShareAgreementContract : Contract {
         val output = tx.outputs.single {it.data is EHRShareAgreementState }
         val outputEHR = output.data as EHRShareAgreementState
         val inputEHR = tx.inputsOfType<EHRShareAgreementState>().single()
-        "Only patient should sign a suspension transaction" using (command.signers.toSet() == setOf(outputEHR.patient.owningKey))
+        //"Both participants should sign a suspension transaction" using (command.signers.toSet() == setOf(outputEHR.participants.map { it.owningKey }.toSet()))
         "Input state of a suspension transaction shouldn't be already suspended" using (inputEHR.status != EHRShareAgreementStateStatus.SUSPENDED)
         "Output state of a suspension transaction should be suspended" using (outputEHR.status != EHRShareAgreementStateStatus.PENDING)
     }
@@ -60,7 +60,7 @@ class EHRShareAgreementContract : Contract {
         val output = tx.outputs.single {it.data is EHRShareAgreementState }
         val outputEHR = output.data as EHRShareAgreementState
         val inputEHR = tx.inputsOfType<EHRShareAgreementState>().single()
-        "Only patient should sign a EHR activation transaction" using (command.signers.toSet() == setOf(outputEHR.patient.owningKey))
+        //"Both participants should sign a activate transaction" using (command.signers.toSet() == setOf(outputEHR.participants.map { it.owningKey }.toSet()))
         "Input state of a EHR activation transaction shouldn't be already active" using (inputEHR.status != EHRShareAgreementStateStatus.ACTIVE)
         "Output state of a EHR activation transaction should be active" using (outputEHR.status == EHRShareAgreementStateStatus.ACTIVE)
     }

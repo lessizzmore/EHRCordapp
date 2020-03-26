@@ -19,7 +19,6 @@ import net.corda.core.transactions.TransactionBuilder
 /**
  * The flow changes status of a PENDING EHRAgreementState to ACTIVE. The flow can be started only by patient.
  *
- * @param EHR EHRShareAgreement state to be activated
  */
 @StartableByRPC
 @InitiatingFlow
