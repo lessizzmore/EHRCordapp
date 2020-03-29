@@ -2,7 +2,6 @@ package com.template.flows
 
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
-import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -14,10 +13,9 @@ import net.corda.testing.node.TestCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.text.SimpleDateFormat
 import kotlin.test.assertEquals
 
-class ActivateEHRFlowTests {
+class RequestShareEHRAgreementFlowTests {
 
     private val mockNetwork = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(
             TestCordapp.findCordapp("com.template.contracts"),
@@ -26,34 +24,18 @@ class ActivateEHRFlowTests {
 
     private lateinit var nodeA: StartedMockNode
     private lateinit var nodeB: StartedMockNode
-    private lateinit var nodeC: StartedMockNode
     private lateinit var partyA: Party
     private lateinit var partyB: Party
-    private lateinit var partyC: Party
-    private lateinit var ehrStateToActivate: EHRShareAgreementState
 
     @Before
     fun setup() {
         nodeA = mockNetwork.createNode()
         nodeB = mockNetwork.createNode()
-        nodeC = mockNetwork.createNode()
         partyA = nodeA.info.chooseIdentityAndCert().party
         partyB = nodeB.info.chooseIdentityAndCert().party
-        partyC = nodeC.info.chooseIdentityAndCert().party
-        listOf(nodeB).forEach {
-            it.registerInitiatedFlow(ActivateEHRFlowResponder::class.java)
-        }
         listOf(nodeA).forEach {
             it.registerInitiatedFlow(RequestShareEHRAgreementFlowResponder::class.java)
         }
-        ehrStateToActivate = EHRShareAgreementState(
-                partyA,
-                partyB,
-                partyC,
-                "EKG",
-                null,
-                EHRShareAgreementStateStatus.PENDING
-        )
     }
 
     @After
@@ -61,21 +43,21 @@ class ActivateEHRFlowTests {
 
     @Test
     fun flowReturnsCorrectlyFormedTransaction() {
-        val future1 = nodeB.startFlow(RequestShareEHRAgreementFlow(partyA, partyB))
-        val future2 = nodeA.startFlow(ActivateEHRFlow(partyB, ))
+        val future = nodeB.startFlow(RequestShareEHRAgreementFlow(partyA, partyB))
         mockNetwork.runNetwork()
-        val ptx: SignedTransaction = future2.getOrThrow()
+        val ptx: SignedTransaction = future.getOrThrow()
 
+        assert(ptx.tx.inputs.isEmpty())
         assert(ptx.tx.outputs.size == 1)
         assert(ptx.tx.outputs[0].data is EHRShareAgreementState)
         assert(ptx.tx.commands.singleOrNull() != null)
-        assert(ptx.tx.commands.single().value is EHRShareAgreementContract.Commands.Activate)
+        assert(ptx.tx.commands.single().value is EHRShareAgreementContract.Commands.Create)
         assert(ptx.tx.requiredSigningKeys.equals(setOf(partyA.owningKey, partyB.owningKey)))
     }
 
     @Test
     fun flowReturnsTransactionSignedByBothParties() {
-        val future = nodeA.startFlow(ActivateEHRFlow(partyB, ehrStateToActivate.linearId))
+        val future = nodeB.startFlow(RequestShareEHRAgreementFlow(partyA, partyB))
         mockNetwork.runNetwork()
         val stx = future.getOrThrow()
         stx.verifyRequiredSignatures()
@@ -83,7 +65,7 @@ class ActivateEHRFlowTests {
 
     @Test
     fun flowRecordsTheSameTransactionInBothPartyVaults() {
-        val future = nodeA.startFlow(ActivateEHRFlow(partyB, ehrStateToActivate.linearId))
+        val future = nodeB.startFlow(RequestShareEHRAgreementFlow(partyA, partyB))
         mockNetwork.runNetwork()
         val stx = future.getOrThrow()
 

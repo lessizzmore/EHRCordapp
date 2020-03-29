@@ -10,13 +10,13 @@ import net.corda.core.contracts.LinearState as LinearState
 
 // target doctor is an observer
 @BelongsToContract(EHRShareAgreementContract::class)
-data class EHRShareAgreementState (val patient: Party,
-                     val originDoctor: Party,
-                     val targetDoctor: Party,
-                     val note: String? = null,
-                     val attachmentId: SecureHash? = null,
-                     val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,
-                     override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState {
+data class EHRShareAgreementState(val patient: Party,
+                                  val originDoctor: Party,
+                                  val targetDoctor: Party,
+                                  val note: String? = "",
+                                  val attachmentId: SecureHash? = null,
+                                  val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,
+                                  override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState {
 
     /**
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
