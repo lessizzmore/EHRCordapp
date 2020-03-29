@@ -4,6 +4,7 @@ import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.identity.Party
+import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.internal.chooseIdentityAndCert
@@ -46,23 +47,29 @@ class ActivateEHRFlowTests {
         listOf(nodeA).forEach {
             it.registerInitiatedFlow(RequestShareEHRAgreementFlowResponder::class.java)
         }
-        ehrStateToActivate = EHRShareAgreementState(
-                partyA,
-                partyB,
-                partyC,
-                "EKG",
-                null,
-                EHRShareAgreementStateStatus.PENDING
-        )
+        ehrStateToActivate = createEHRShareAgreementState()
     }
 
     @After
     fun tearDown() = mockNetwork.stopNodes()
 
+    // helper functions
+    private fun createEHRShareAgreementState(): EHRShareAgreementState {
+
+        val flow = RequestShareEHRAgreementFlow(partyA, partyB)
+        val future = nodeB.startFlow(flow)
+        mockNetwork.runNetwork()
+        future.getOrThrow()
+
+        val states = nodeB.transaction {
+            nodeB.services.vaultService.queryBy<EHRShareAgreementState>().states
+        }
+        return states.last().state.data
+    }
+
     @Test
     fun flowReturnsCorrectlyFormedTransaction() {
-        val future1 = nodeB.startFlow(RequestShareEHRAgreementFlow(partyA, partyB))
-        val future2 = nodeA.startFlow(ActivateEHRFlow(partyB, ))
+        val future2 = nodeA.startFlow(ActivateEHRFlow(partyB, ehrStateToActivate.linearId))
         mockNetwork.runNetwork()
         val ptx: SignedTransaction = future2.getOrThrow()
 
@@ -70,7 +77,7 @@ class ActivateEHRFlowTests {
         assert(ptx.tx.outputs[0].data is EHRShareAgreementState)
         assert(ptx.tx.commands.singleOrNull() != null)
         assert(ptx.tx.commands.single().value is EHRShareAgreementContract.Commands.Activate)
-        assert(ptx.tx.requiredSigningKeys.equals(setOf(partyA.owningKey, partyB.owningKey)))
+        assert(ptx.tx.commands[0].signers == listOf(partyA.owningKey, partyB.owningKey))
     }
 
     @Test

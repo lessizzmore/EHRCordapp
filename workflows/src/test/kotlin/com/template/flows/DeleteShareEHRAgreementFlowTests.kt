@@ -2,8 +2,8 @@ package com.template.flows
 
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
-import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.identity.Party
+import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.internal.chooseIdentityAndCert
@@ -16,7 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class DeleteShareEHRAgreementFlowTests {
+class DeleteShareEHRFlowTests {
 
     private val mockNetwork = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(
             TestCordapp.findCordapp("com.template.contracts"),
@@ -31,7 +31,6 @@ class DeleteShareEHRAgreementFlowTests {
     private lateinit var partyC: Party
     private lateinit var ehrStateToDelete: EHRShareAgreementState
 
-
     @Before
     fun setup() {
         nodeA = mockNetwork.createNode()
@@ -40,40 +39,45 @@ class DeleteShareEHRAgreementFlowTests {
         partyA = nodeA.info.chooseIdentityAndCert().party
         partyB = nodeB.info.chooseIdentityAndCert().party
         partyC = nodeC.info.chooseIdentityAndCert().party
-        listOf(nodeA, nodeB, nodeC).forEach {
-            it.registerInitiatedFlow(DeleteShareEHRAgreementFlowResponder::class.java)
-        }
+        nodeB.registerInitiatedFlow(SuspendEHRFlowResponder::class.java)
+        nodeA.registerInitiatedFlow(RequestShareEHRAgreementFlowResponder::class.java)
 
-        ehrStateToDelete = EHRShareAgreementState(
-                partyA,
-                partyB,
-                partyC,
-                "EKG",
-                null,
-                EHRShareAgreementStateStatus.PENDING
-        )
+        ehrStateToDelete = createEHRShareAgreementState()
     }
 
     @After
     fun tearDown() = mockNetwork.stopNodes()
 
+    // helper functions
+    private fun createEHRShareAgreementState(): EHRShareAgreementState {
+
+        val flow = RequestShareEHRAgreementFlow(partyA, partyB)
+        val future = nodeB.startFlow(flow)
+        mockNetwork.runNetwork()
+        future.getOrThrow()
+
+        val states = nodeB.transaction {
+            nodeB.services.vaultService.queryBy<EHRShareAgreementState>().states
+        }
+        return states.last().state.data
+    }
+
     @Test
     fun flowReturnsCorrectlyFormedTransaction() {
-        val future = nodeA.startFlow(DeleteShareEHRAgreementFlow(partyB, ehrStateToDelete.linearId))
+        val future2 = nodeA.startFlow(ActivateEHRFlow(partyB, ehrStateToDelete.linearId))
         mockNetwork.runNetwork()
-        val ptx: SignedTransaction = future.getOrThrow()
+        val ptx: SignedTransaction = future2.getOrThrow()
 
-        assert(ptx.tx.inputs.size == 1)
-        assert(ptx.tx.outputs.isEmpty())
+        assert(ptx.tx.outputs.size == 1)
         assert(ptx.tx.outputs[0].data is EHRShareAgreementState)
         assert(ptx.tx.commands.singleOrNull() != null)
-        assert(ptx.tx.commands.single().value is EHRShareAgreementContract.Commands.Delete)
-        assert(ptx.tx.requiredSigningKeys.equals(setOf(partyA.owningKey, partyB.owningKey)))
+        assert(ptx.tx.commands.single().value is EHRShareAgreementContract.Commands.Activate)
+        assert(ptx.tx.commands[0].signers == listOf(partyA.owningKey, partyB.owningKey))
     }
 
     @Test
     fun flowReturnsTransactionSignedByBothParties() {
-        val future = nodeA.startFlow(DeleteShareEHRAgreementFlow(partyB, ehrStateToDelete.linearId))
+        val future = nodeA.startFlow(ActivateEHRFlow(partyB, ehrStateToDelete.linearId))
         mockNetwork.runNetwork()
         val stx = future.getOrThrow()
         stx.verifyRequiredSignatures()
@@ -81,7 +85,7 @@ class DeleteShareEHRAgreementFlowTests {
 
     @Test
     fun flowRecordsTheSameTransactionInBothPartyVaults() {
-        val future = nodeA.startFlow(DeleteShareEHRAgreementFlow(partyB, ehrStateToDelete.linearId))
+        val future = nodeA.startFlow(ActivateEHRFlow(partyB, ehrStateToDelete.linearId))
         mockNetwork.runNetwork()
         val stx = future.getOrThrow()
 
@@ -92,5 +96,4 @@ class DeleteShareEHRAgreementFlowTests {
             assertEquals(txHash, stx.id)
         }
     }
-
 }
