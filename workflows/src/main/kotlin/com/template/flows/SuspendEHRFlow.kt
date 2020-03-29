@@ -6,6 +6,7 @@ import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -22,7 +23,10 @@ import net.corda.core.transactions.TransactionBuilder
  */
 @StartableByRPC
 @InitiatingFlow
-open class SuspendEHRFlow(val targetDoctor: Party) : FlowLogic<SignedTransaction>() {
+open class SuspendEHRFlow(
+        val targetDoctor: Party,
+        val ehrId: UniqueIdentifier
+) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -31,9 +35,11 @@ open class SuspendEHRFlow(val targetDoctor: Party) : FlowLogic<SignedTransaction
 //            throw FlowException("Suspend EHRShareAgreementState flow must be initiated by patient.")
 //        }
         // get input state
-        val queryCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
-        val ehrStateRefToSuspend= serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.single()
-
+        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
+                null,
+                listOf(ehrId),
+                Vault.StateStatus.UNCONSUMED, null)
+        val ehrStateRefToSuspend= serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
         val suspendCommand = Command(EHRShareAgreementContract.Commands.Suspend(), listOf(ourIdentity, targetDoctor).map { it.owningKey })
 
         // Create suspend tx

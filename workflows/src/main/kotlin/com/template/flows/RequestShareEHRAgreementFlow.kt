@@ -3,7 +3,6 @@ package com.template.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
-import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
@@ -11,11 +10,10 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
 
 @InitiatingFlow
 @StartableByRPC
-class RequestShareEHRAgreementFlow(val patient: Party): FlowLogic<SignedTransaction>() {
+class RequestShareEHRAgreementFlow(val patient: Party, val targetDoctor: Party): FlowLogic<SignedTransaction>() {
 
 
     companion object {
@@ -39,7 +37,7 @@ class RequestShareEHRAgreementFlow(val patient: Party): FlowLogic<SignedTransact
 
 
         // create output EHRShareAgreementState
-        val initialEHRShareAgreementState = EHRShareAgreementState(patient, ourIdentity, "blood test result")
+        val initialEHRShareAgreementState = EHRShareAgreementState(patient, ourIdentity, targetDoctor,"blood test result")
 
 
         // create tx builder. add output state and command

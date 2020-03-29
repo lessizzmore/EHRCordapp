@@ -6,6 +6,7 @@ import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -17,13 +18,20 @@ import net.corda.core.transactions.TransactionBuilder
 
 @InitiatingFlow
 @StartableByRPC
-class ShareEHRFlow(val patient: Party): FlowLogic<SignedTransaction>() {
+class ShareEHRFlow(
+        val patient: Party,
+        val ehrId: UniqueIdentifier
+): FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
         // get input state
-        val queryCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
-        val ehrStateRefToShare = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.single()
+        // Get EHRShareAgreementState to clear.
+        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
+                null,
+                listOf(ehrId),
+                Vault.StateStatus.UNCONSUMED, null)
+        val ehrStateRefToShare = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
 
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
 

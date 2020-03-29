@@ -2,19 +2,19 @@
   <img src="https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png" alt="Corda" width="500">
 </p>
 
-# CorDapp Template - Kotlin
+# CorDapp - Kotlin
 
-Welcome to the Kotlin CorDapp template. The CorDapp template is a stubbed-out CorDapp that you can use to bootstrap 
-your own CorDapps.
-
-**This is the Kotlin version of the CorDapp template. The Java equivalent is 
-[here](https://github.com/corda/cordapp-template-java/).**
+**This CorDapp is written in Kotlin
 
 # Pre-Requisites
 
 See https://docs.corda.net/getting-set-up.html.
 
 # Usage
+This cordapp is used for different parties to agree on sharing a patient's electronic health records.
+EHRShareAgreementState exits in the following 3 conditions:
+- suspended by patient
+- delete by origin doctor
 
 ## Running tests inside IntelliJ
 

@@ -78,7 +78,7 @@ class EHRShareAgreementContract : Contract {
         "There must be one and only input media asset." using (ehrShareAgreementInputs.size == 1)
         val inputMediaAsset = ehrShareAgreementInputs.single()
         "No output states should be produced when deleting a EHRSharingAgreement." using (tx.outputStates.isEmpty())
-        "Originator of the EHRShareAgreement must sign the clear transaction." using (signers == inputMediaAsset.originDoctor.owningKey)
+//        "Originator of the EHRShareAgreement must sign the clear transaction." using (signers == inputMediaAsset.originDoctor.owningKey)
     }
 
 }
