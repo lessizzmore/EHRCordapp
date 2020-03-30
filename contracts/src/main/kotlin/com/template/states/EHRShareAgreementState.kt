@@ -1,9 +1,13 @@
 package com.template.states
 
 import com.template.contracts.EHRShareAgreementContract
+import com.template.schemas.EHRShareAgreementSchemaV1
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.contracts.LinearState as LinearState
 
@@ -14,9 +18,10 @@ data class EHRShareAgreementState(val patient: Party,
                                   val originDoctor: Party,
                                   val targetDoctor: Party,
                                   val note: String? = "",
-                                  val attachmentId: SecureHash? = null,
+                                  val attachmentId: String? = "",
                                   val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,
-                                  override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState {
+                                  override val linearId: UniqueIdentifier = UniqueIdentifier()
+) : LinearState, QueryableState {
 
     /**
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
@@ -24,7 +29,20 @@ data class EHRShareAgreementState(val patient: Party,
      */
     override val participants: List<Party> get() = listOfNotNull(originDoctor, patient)
 
-
+    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(EHRShareAgreementSchemaV1)
+    override fun generateMappedObject(schema: MappedSchema): PersistentState {
+        if (!(schema is EHRShareAgreementSchemaV1)) throw Exception()
+        return EHRShareAgreementSchemaV1
+                .PersistentEHRShareAgreementState(
+                        patient,
+                        originDoctor,
+                        targetDoctor,
+                        note= note,
+                        attachmentId = attachmentId,
+                        status = status,
+                        linearId = linearId.id
+        )
+    }
 }
 
 /**
