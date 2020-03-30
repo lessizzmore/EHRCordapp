@@ -20,6 +20,7 @@ import net.corda.core.transactions.TransactionBuilder
 @StartableByRPC
 class ShareEHRFlow(
         val patient: Party,
+        val targetDoctor: Party,
         val ehrId: UniqueIdentifier
 ): FlowLogic<SignedTransaction>() {
 
@@ -31,7 +32,7 @@ class ShareEHRFlow(
                 null,
                 listOf(ehrId),
                 Vault.StateStatus.UNCONSUMED, null)
-        val ehrStateRefToShare = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+        val ehrStateRefToShare = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.single()
 
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
@@ -51,7 +52,7 @@ class ShareEHRFlow(
         val ftx = subFlow(FinalityFlow(stx, listOf(targetSession)))
 
         // broadcast transaction to observer
-        subFlow(BroadcastTransaction(ftx))
+        subFlow(BroadcastTransaction(ftx, listOf(targetDoctor)))
 
         return ftx
 

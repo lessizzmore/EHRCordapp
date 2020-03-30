@@ -12,7 +12,10 @@
 //import javax.persistence.Table
 //
 //object EHRShareAgreementSchema
-//object EHRShareAgreementSchemaV1 : MappedSchema(schemaFamily = EHRShareAgreementSchema.javaClass, version = 1, mappedTypes = listOf(PersistentEHRShareAgreementState::class.java)) {
+//object EHRShareAgreementSchemaV1 : MappedSchema(
+//        schemaFamily = EHRShareAgreementSchema.javaClass,
+//        version = 1,
+//        mappedTypes = listOf(PersistentEHRShareAgreementState::class.java)) {
 //    @Entity
 //    @Table(name = "ehr_share_agreement_states")
 //    class PersistentEHRShareAgreementState(
