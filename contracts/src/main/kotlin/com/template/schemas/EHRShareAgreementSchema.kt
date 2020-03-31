@@ -10,9 +10,9 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Table
 
-object EHRShareAgreementSchema
-object EHRShareAgreementSchemaV1 : MappedSchema(
-        schemaFamily = EHRShareAgreementSchema.javaClass,
+object EhrShareAgreementSchema
+object EhrShareAgreementSchemaV1 : MappedSchema(
+        schemaFamily = EhrShareAgreementSchema.javaClass,
         version = 1,
         mappedTypes = listOf(PersistentEHRShareAgreementState::class.java)) {
     @Entity

@@ -1,6 +1,6 @@
 package com.template.flows
 
-import BroadcastTransaction
+import BroadcastTransactionToRecipients
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
@@ -52,7 +52,7 @@ class ShareEHRFlow(
         val ftx = subFlow(FinalityFlow(stx, listOf(targetSession)))
 
         // broadcast transaction to observer
-        subFlow(BroadcastTransaction(ftx, listOf(targetDoctor)))
+        subFlow(BroadcastTransactionToRecipients(ftx, listOf(targetDoctor)))
 
         return ftx
 

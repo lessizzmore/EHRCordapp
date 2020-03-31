@@ -11,7 +11,7 @@ import net.corda.core.transactions.SignedTransaction
  * remaining identities.
  */
 @InitiatingFlow
-class BroadcastTransaction(
+class BroadcastTransactionToRecipients(
         val stx: SignedTransaction,
         val recipients: List<Party>) : FlowLogic<Unit>() {
 

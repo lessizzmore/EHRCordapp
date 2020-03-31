@@ -7,7 +7,7 @@ import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.node.StatesToRecord
 
 /**
- * Other side of the [BroadcastTransaction] flow. It uses the observable states feature. When [ReceiveTransactionFlow]
+ * Other side of the [BroadcastTransactionToRecipients] flow. It uses the observable states feature. When [ReceiveTransactionFlow]
  * is called, the [StatesToRecord.ALL_VISIBLE] parameter is used so that all the states are recorded despite the
  * receiving node not being a participant in these states.
  *
@@ -15,8 +15,8 @@ import net.corda.core.node.StatesToRecord
  * problems when using [generateSpend] as the vault currently assumes that all states in the vault are spendable. States
  * you are only an observer of are NOT spendable!
  */
-@InitiatedBy(BroadcastTransaction::class)
-class RecordTransactionAsObserver(val otherSession: FlowSession) : FlowLogic<Unit>() {
+@InitiatedBy(BroadcastTransactionToRecipients::class)
+class RecordTransactionAsObservers(val otherSession: FlowSession) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {

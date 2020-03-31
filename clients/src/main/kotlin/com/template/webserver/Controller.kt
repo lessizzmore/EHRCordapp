@@ -1,14 +1,23 @@
 package com.template.webserver
 
+import com.template.flows.ActivateEHRFlow
+import com.template.flows.DeleteShareEHRAgreementFlow
+import com.template.flows.RequestShareEHRAgreementFlow
+import com.template.flows.SuspendEHRFlow
+import com.template.states.EHRShareAgreementState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.*
+import net.corda.core.utilities.getOrThrow
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
@@ -18,9 +27,11 @@ import java.io.InputStream
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.servlet.http.HttpServletRequest
 
 
 @RestController
@@ -112,5 +123,119 @@ class Controller(rpc: NodeRPCConnection) {
         } finally {
             Files.deleteIfExists(Paths.get(zipName))
         }
+    }
+
+    @GetMapping(value = ["ehr-states"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun getEHRs(): MutableList<StateAndRef<EHRShareAgreementState>> {
+
+        var pageNumber = DEFAULT_PAGE_NUM
+        val pageSize = 200
+        val states = mutableListOf<StateAndRef<EHRShareAgreementState>>()
+        val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME), Sort.Direction.ASC)))
+
+        do {
+            val pageSpec = PageSpecification(pageNumber = pageNumber, pageSize = pageSize)
+            val results = proxy.vaultQueryBy(
+                    QueryCriteria.VaultQueryCriteria(),
+                    pageSpec,
+                    sorting,
+                    EHRShareAgreementState::class.java)
+            states.addAll(results.states)
+            pageNumber++
+        } while ((pageSpec.pageSize * (pageNumber - 1)) <= results.totalStatesAvailable)
+
+        return states
+    }
+
+    @PostMapping(value = ["send-ehr-share-request"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    fun sendEHRShareRequest (request: HttpServletRequest): ResponseEntity<String> {
+
+        val publisher = request.getParameter("publisher")
+        val label = request.getParameter("label")
+        val mediaType = request.getParameter("media-type")
+        val unitType = request.getParameter("unit-type")
+        val quantity = request.getParameter("quantity").toLong()
+
+        val (status, message) = try {
+            val flowHandle = proxy.startFlowDynamic(
+                    RequestShareEHRAgreementFlow::class.java,
+                    publisher,
+                    label,
+                    mediaType,
+                    unitType,
+                    quantity
+            )
+
+            flowHandle.use { it.returnValue.getOrThrow() }
+            HttpStatus.CREATED to "EHR state committed to ledger for $quantity $unitType from $publisher."
+        } catch (e: Exception) {
+            HttpStatus.BAD_REQUEST to e.message
+        }
+
+        return ResponseEntity.status(status).body(message)
+    }
+
+
+    @PostMapping(value = ["activate-ehr-state"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    fun activatePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
+
+        val ehrId = request.getParameter("ehr-id")
+        val ehrState = UniqueIdentifier.fromString(ehrId)
+
+        val (status, message) = try {
+            val flowHandle = proxy.startFlowDynamic(
+                    ActivateEHRFlow::class.java,
+                    ehrState
+            )
+
+            flowHandle.use { it.returnValue.getOrThrow() }
+            HttpStatus.CREATED to "EHR state $ehrState deleted."
+        } catch (e: Exception) {
+            HttpStatus.BAD_REQUEST to e.message
+        }
+
+        return ResponseEntity.status(status).body(message)
+    }
+
+    @PostMapping(value = ["suspend-ehr-state"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    fun suspendPendingEHR (request: HttpServletRequest): ResponseEntity<String> {
+
+        val ehrId = request.getParameter("ehr-id")
+        val ehrState = UniqueIdentifier.fromString(ehrId)
+
+        val (status, message) = try {
+            val flowHandle = proxy.startFlowDynamic(
+                    SuspendEHRFlow::class.java,
+                    ehrState
+            )
+
+            flowHandle.use { it.returnValue.getOrThrow() }
+            HttpStatus.CREATED to "EHR state $ehrState deleted."
+        } catch (e: Exception) {
+            HttpStatus.BAD_REQUEST to e.message
+        }
+
+        return ResponseEntity.status(status).body(message)
+    }
+
+    @PostMapping(value = ["delete-ehr-state"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    fun deletePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
+
+        val ehrId = request.getParameter("ehr-id")
+        val ehrState = UniqueIdentifier.fromString(ehrId)
+
+        val (status, message) = try {
+            val flowHandle = proxy.startFlowDynamic(
+                    DeleteShareEHRAgreementFlow::class.java,
+                    ehrState
+            )
+
+            flowHandle.use { it.returnValue.getOrThrow() }
+            HttpStatus.CREATED to "EHR state $ehrState deleted."
+        } catch (e: Exception) {
+            HttpStatus.BAD_REQUEST to e.message
+        }
+
+        return ResponseEntity.status(status).body(message)
     }
 }

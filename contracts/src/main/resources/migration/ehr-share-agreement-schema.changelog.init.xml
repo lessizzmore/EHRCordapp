@@ -35,7 +35,6 @@
             <column name="linearId" type="VARCHAR(255)" >
                 <constraints nullable="false"/>
             </column>
-
         </createTable>
     </changeSet>
 </databaseChangeLog>
