@@ -27,7 +27,6 @@ import java.io.InputStream
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -147,27 +146,23 @@ class Controller(rpc: NodeRPCConnection) {
         return states
     }
 
-    @PostMapping(value = ["send-ehr-share-request"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @PostMapping(value = ["send-request"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
     fun sendEHRShareRequest (request: HttpServletRequest): ResponseEntity<String> {
 
-        val publisher = request.getParameter("publisher")
-        val label = request.getParameter("label")
-        val mediaType = request.getParameter("media-type")
-        val unitType = request.getParameter("unit-type")
-        val quantity = request.getParameter("quantity").toLong()
+        val patient = request.getParameter("patient")
+        val originD = request.getParameter("origin-doctor")
+        val targetD = request.getParameter("target-doctor")
 
         val (status, message) = try {
             val flowHandle = proxy.startFlowDynamic(
                     RequestShareEHRAgreementFlow::class.java,
-                    publisher,
-                    label,
-                    mediaType,
-                    unitType,
-                    quantity
+                    patient,
+                    originD,
+                    targetD
             )
 
             flowHandle.use { it.returnValue.getOrThrow() }
-            HttpStatus.CREATED to "EHR state committed to ledger for $quantity $unitType from $publisher."
+            HttpStatus.CREATED to "EHR state committed to ledger for $patient $targetD from $originD."
         } catch (e: Exception) {
             HttpStatus.BAD_REQUEST to e.message
         }
@@ -189,7 +184,7 @@ class Controller(rpc: NodeRPCConnection) {
             )
 
             flowHandle.use { it.returnValue.getOrThrow() }
-            HttpStatus.CREATED to "EHR state $ehrState deleted."
+            HttpStatus.CREATED to "EHR state $ehrState activated."
         } catch (e: Exception) {
             HttpStatus.BAD_REQUEST to e.message
         }
@@ -210,7 +205,7 @@ class Controller(rpc: NodeRPCConnection) {
             )
 
             flowHandle.use { it.returnValue.getOrThrow() }
-            HttpStatus.CREATED to "EHR state $ehrState deleted."
+            HttpStatus.CREATED to "EHR state $ehrState suspended."
         } catch (e: Exception) {
             HttpStatus.BAD_REQUEST to e.message
         }
