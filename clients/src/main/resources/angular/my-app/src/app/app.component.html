@@ -1,5 +1,15 @@
+
 <mat-tab-group animationDuration="0ms"> 
-  <mat-tab label="Patient">View 1</mat-tab>
-  <mat-tab label="Origin Doctor">View 2</mat-tab>
-  <mat-tab label="Target Doctor">View 3</mat-tab>
+  <mat-tab label="Origin Doctor Form">
+    <app-ehr-form></app-ehr-form>
+  </mat-tab>
+  <mat-tab label="Origin Doctor EHR List">
+    <app-ehrs></app-ehrs>
+  </mat-tab>
+  <mat-tab label="Patient EHR List">
+    <app-ehrs></app-ehrs>
+  </mat-tab>
+  <mat-tab label="Target Doctor EHR List">
+    <app-ehrs></app-ehrs>
+  </mat-tab>
 </mat-tab-group>
