@@ -1,9 +1,8 @@
 package com.template.states
 
 import com.template.contracts.EHRShareAgreementContract
-import com.template.schemas.EHRShareAgreementSchemaV1
+import com.template.schemas.EhrShareAgreementSchemaV1
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -29,11 +28,11 @@ data class EHRShareAgreementState(val patient: Party,
      */
     override val participants: List<Party> get() = listOfNotNull(originDoctor, patient)
 
-    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(EHRShareAgreementSchemaV1)
+    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(EhrShareAgreementSchemaV1)
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
-        if (!(schema is EHRShareAgreementSchemaV1)) throw Exception()
-        return EHRShareAgreementSchemaV1
-                .PersistentEHRShareAgreementState(
+        if (!(schema is EhrShareAgreementSchemaV1)) throw Exception()
+        return EhrShareAgreementSchemaV1
+                .PersistentEhrShareAgreementState(
                         patient,
                         originDoctor,
                         targetDoctor,

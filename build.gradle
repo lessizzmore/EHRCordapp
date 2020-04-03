@@ -104,6 +104,7 @@ cordapp {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+
     nodeDefaults {
         projectCordapp {
             deploy = false
@@ -119,6 +120,14 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10003")
             adminAddress("localhost:10043")
         }
+//        extraConfig = ['h2Settings.address' : 'localhost:20040']
+//        extraConfig = [
+//                'dataSourceProperties.dataSource.url' : project.ZZ_PG_LOCAL_BASE_URL + 'postgres',
+//                'dataSourceProperties.dataSourceClassName' : 'org.postgresql.ds.PGSimpleDataSource',
+//                'dataSourceProperties.dataSource.user' : project.ZZ_PG_LOCAL_USER,
+//                'dataSourceProperties.dataSource.password' : project.ZZ_PG_LOCAL_PASSWORD,
+//                'jarDirs' : [ '/Library/Java/postgres' ]
+//        ]
     }
     node {
         name "O=PartyA,L=New York,C=US,CN=Patient"
@@ -128,6 +137,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress("localhost:10046")
         }
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+//        extraConfig = ['h2Settings.address' : 'localhost:20041']
+
+//        extraConfig = [
+//                'dataSourceProperties.dataSource.url' : project.ZZ_PG_LOCAL_BASE_URL + 'postgresA',
+//                'dataSourceProperties.dataSourceClassName' : 'org.postgresql.ds.PGSimpleDataSource',
+//                'dataSourceProperties.dataSource.user' : project.ZZ_PG_LOCAL_USER,
+//                'dataSourceProperties.dataSource.password' : project.ZZ_PG_LOCAL_PASSWORD,
+//                'jarDirs' : [ '/Library/Java/postgres' ]
+//        ]
     }
     node {
         name "O=PartyB,L=New York,C=US,CN=OriginDoctor"
@@ -137,14 +155,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress("localhost:10049")
         }
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+//        extraConfig = ['h2Settings.address' : 'localhost:20043']
 
         // this can be commented in or out for testing
 
 //        extraConfig = [
-//            'dataSourceProperties.dataSource.url' : 'jdbc:postgresql://localhost:5432/postgres',
+//            'dataSourceProperties.dataSource.url' : project.ZZ_PG_LOCAL_BASE_URL + 'postgresB',
 //            'dataSourceProperties.dataSourceClassName' : 'org.postgresql.ds.PGSimpleDataSource',
-//            'dataSourceProperties.dataSource.user' : 'user',
-//            'dataSourceProperties.dataSource.password' : 'password',
+//            'dataSourceProperties.dataSource.user' : project.ZZ_PG_LOCAL_USER,
+//            'dataSourceProperties.dataSource.password' : project.ZZ_PG_LOCAL_PASSWORD,
 //            'jarDirs' : [ '/Library/Java/postgres' ]
 //        ]
     }
@@ -156,6 +175,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress("localhost:10050")
         }
         rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
+//        extraConfig = ['h2Settings.address' : 'localhost:20045']
+
+//        extraConfig = [
+//                'dataSourceProperties.dataSource.url' : project.ZZ_PG_LOCAL_BASE_URL + 'postgresC',
+//                'dataSourceProperties.dataSourceClassName' : 'org.postgresql.ds.PGSimpleDataSource',
+//                'dataSourceProperties.dataSource.user' : project.ZZ_PG_LOCAL_USER,
+//                'dataSourceProperties.dataSource.password' : project.ZZ_PG_LOCAL_PASSWORD,
+//                'jarDirs' : [ '/Library/Java/postgres' ]
+//        ]
     }
 
 }

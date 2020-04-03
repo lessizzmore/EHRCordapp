@@ -4,8 +4,8 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
                    http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="Zhenzhen_Tan" id="create_ehr_share_states">
-        <createTable tableName="ehr_share_states">
+    <changeSet id="001" author="zhenzhentan">
+        <createTable tableName="ehr_share_agreement_states">
 
             <column name="output_index" type="INT">
                 <constraints nullable="false"/>

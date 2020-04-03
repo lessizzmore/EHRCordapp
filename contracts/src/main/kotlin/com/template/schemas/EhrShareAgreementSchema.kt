@@ -14,10 +14,10 @@ object EhrShareAgreementSchema
 object EhrShareAgreementSchemaV1 : MappedSchema(
         schemaFamily = EhrShareAgreementSchema.javaClass,
         version = 1,
-        mappedTypes = listOf(PersistentEHRShareAgreementState::class.java)) {
+        mappedTypes = listOf(PersistentEhrShareAgreementState::class.java)) {
     @Entity
     @Table(name = "ehr_share_agreement_states")
-    class PersistentEHRShareAgreementState(
+    class PersistentEhrShareAgreementState(
             @Column(name = "patient")
             var patient: Party,
 
@@ -41,5 +41,5 @@ object EhrShareAgreementSchemaV1 : MappedSchema(
             var linearId: UUID
     ) : PersistentState()
 
-    override val migrationResource = "eHRShareAgreementSchema.changelog.init"
+    override val migrationResource = "ehr-share-agreement-schema.changelog-init"
 }
