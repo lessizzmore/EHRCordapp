@@ -8,7 +8,10 @@ import com.template.states.EHRShareAgreementState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.*
 import net.corda.core.utilities.getOrThrow
@@ -18,7 +21,9 @@ import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.ResponseEntity
+import org.springframework.http.ResponseEntity.*
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.io.FileInputStream
@@ -33,6 +38,11 @@ import java.util.zip.ZipOutputStream
 import javax.servlet.http.HttpServletRequest
 
 
+/**
+ *  A Spring Boot Server API controller for interacting with the node via RPC.
+ */
+val SERVICE_NAMES = listOf("Notary", "Network Map Service")
+
 @RestController
 @RequestMapping("/") // The paths for HTTP requests are relative to this base path.
 class Controller(rpc: NodeRPCConnection) {
@@ -40,8 +50,30 @@ class Controller(rpc: NodeRPCConnection) {
     companion object {
         private val logger = LoggerFactory.getLogger(RestController::class.java)
     }
-
+    private val myLegalName = rpc.proxy.nodeInfo().legalIdentities.first().name
     private val proxy: CordaRPCOps = rpc.proxy
+
+
+    /**
+     * Returns the node's name.
+     */
+    @GetMapping(value = [ "me" ], produces = [ APPLICATION_JSON_VALUE ])
+    fun whoami() = mapOf("me" to myLegalName)
+
+    /**
+     * Returns all parties registered with the network map service. These names can be used to look up identities using
+     * the identity service.
+     */
+    @GetMapping(value = [ "peers" ], produces = [ APPLICATION_JSON_VALUE ])
+    fun getPeers(): Map<String, List<CordaX500Name>> {
+        val nodeInfo = proxy.networkMapSnapshot()
+        return mapOf("peers" to nodeInfo
+                .map { it.legalIdentities.first().name }
+                //filter out myself, notary and eventual network map started by driver
+                .filter { it.organisation !in (SERVICE_NAMES + myLegalName.organisation) })
+    }
+
+
 
     @PostMapping
     fun upload(@RequestParam file: MultipartFile, @RequestParam uploader: String): ResponseEntity<String> {
@@ -56,7 +88,7 @@ class Controller(rpc: NodeRPCConnection) {
                     filename = filename!!
             )
         }
-        return ResponseEntity.created(URI.create("attachments/$hash")).body("Attachment uploaded with hash - $hash")
+        return created(URI.create("attachments/$hash")).body("Attachment uploaded with hash - $hash")
     }
 
     private fun uploadZip(inputStream: InputStream, uploader: String, filename: String): AttachmentId {
@@ -82,7 +114,7 @@ class Controller(rpc: NodeRPCConnection) {
     @GetMapping("/{hash}")
     fun downloadByHash(@PathVariable hash: String): ResponseEntity<Resource> {
         val inputStream = InputStreamResource(proxy.openAttachment(SecureHash.parse(hash)))
-        return ResponseEntity.ok().header(
+        return ok().header(
                 HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"$hash.zip\""
         ).body(inputStream)
@@ -100,7 +132,7 @@ class Controller(rpc: NodeRPCConnection) {
         } else {
             combineZips(inputStreams, name)
         }
-        return ResponseEntity.ok().header(
+        return ok().header(
                 HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"$name.zip\""
         ).body(InputStreamResource(zipToReturn))
@@ -124,7 +156,10 @@ class Controller(rpc: NodeRPCConnection) {
         }
     }
 
-    @GetMapping(value = ["ehr-states"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    /**
+     * Displays all EHR states that exist in the node's vault with pagination.
+     */
+    @GetMapping(value = ["ehrs"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun getEHRs(): MutableList<StateAndRef<EHRShareAgreementState>> {
 
         var pageNumber = DEFAULT_PAGE_NUM
@@ -146,91 +181,125 @@ class Controller(rpc: NodeRPCConnection) {
         return states
     }
 
-    @PostMapping(value = ["send-request"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+
+    /**
+     * Initiates a flow to agree an EHR share between two parties.
+     *
+     * Once the flow finishes it will have written the EHR to ledger. Both the patient and the origin doctor will be able to
+     * see it on their respective nodes.
+     *
+     * This end-point takes a patient and a target-doctor name parameter as part of the path. If the serving node can't find the other party
+     * in its network map cache, it will return an HTTP bad request.
+     *
+     * The flow is invoked asynchronously. It returns a future when the flow's call() method returns.
+     */
+    @PostMapping(value = ["create-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
     fun sendEHRShareRequest (request: HttpServletRequest): ResponseEntity<String> {
 
         val patient = request.getParameter("patient")
-        val originD = request.getParameter("origin-doctor")
         val targetD = request.getParameter("target-doctor")
 
-        val (status, message) = try {
-            val flowHandle = proxy.startFlowDynamic(
-                    RequestShareEHRAgreementFlow::class.java,
-                    patient,
-                    originD,
-                    targetD
-            )
-
-            flowHandle.use { it.returnValue.getOrThrow() }
-            HttpStatus.CREATED to "EHR state committed to ledger for $patient $targetD from $originD."
-        } catch (e: Exception) {
-            HttpStatus.BAD_REQUEST to e.message
+        if(patient == null){
+            return ResponseEntity.badRequest().body("Query parameter 'patient' must not be null.\n")
+        }
+        if(targetD == null){
+            return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
         }
 
-        return ResponseEntity.status(status).body(message)
+        val patientX500Name = CordaX500Name.parse(patient)
+        val patientParty = proxy.wellKnownPartyFromX500Name(patientX500Name) ?: return ResponseEntity.badRequest().body("Party named $patient cannot be found.\n")
+        val targetDX500Name = CordaX500Name.parse(targetD)
+        val targetDParty = proxy.wellKnownPartyFromX500Name(targetDX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
+
+
+        return try {
+            val signedTx = proxy.startTrackedFlow(::RequestShareEHRAgreementFlow, patientParty, targetDParty).returnValue.getOrThrow()
+            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n")
+
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
+
     }
 
+    @GetMapping(value = [ "patient-ehrs" ], produces = [ APPLICATION_JSON_VALUE ])
+    fun getPatientEHRs(): ResponseEntity<List<StateAndRef<EHRShareAgreementState>>>  {
+        val myehrs = proxy.vaultQueryBy<EHRShareAgreementState>().states.filter { it.state.data.patient.equals(proxy.nodeInfo().legalIdentities.first()) }
+        return ResponseEntity.ok(myehrs)
+    }
 
-    @PostMapping(value = ["activate-ehr-state"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @GetMapping(value = [ "originD-ehrs" ], produces = [ APPLICATION_JSON_VALUE ])
+    fun getOriginDoctorEHRs(): ResponseEntity<List<StateAndRef<EHRShareAgreementState>>>  {
+        val myehrs = proxy.vaultQueryBy<EHRShareAgreementState>().states.filter { it.state.data.originDoctor.equals(proxy.nodeInfo().legalIdentities.first()) }
+        return ResponseEntity.ok(myehrs)
+    }
+
+    @GetMapping(value = [ "targetD-ehrs" ], produces = [ APPLICATION_JSON_VALUE ])
+    fun getTargetDoctorEHRs(): ResponseEntity<List<StateAndRef<EHRShareAgreementState>>>  {
+        val myehrs = proxy.vaultQueryBy<EHRShareAgreementState>().states.filter { it.state.data.targetDoctor.equals(proxy.nodeInfo().legalIdentities.first()) }
+        return ResponseEntity.ok(myehrs)
+    }
+
+    @PostMapping(value = ["activate-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
     fun activatePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
+        val targetD = request.getParameter("target-doctor")
+                ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
+
+        val targetDX500Name = CordaX500Name.parse(targetD)
+        val targetDParty = proxy.wellKnownPartyFromX500Name(targetDX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
 
         val ehrId = request.getParameter("ehr-id")
         val ehrState = UniqueIdentifier.fromString(ehrId)
+        return try {
+            val signedTx = proxy.startTrackedFlow(::ActivateEHRFlow, targetDParty, ehrState).returnValue.getOrThrow()
+            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState activated")
 
-        val (status, message) = try {
-            val flowHandle = proxy.startFlowDynamic(
-                    ActivateEHRFlow::class.java,
-                    ehrState
-            )
-
-            flowHandle.use { it.returnValue.getOrThrow() }
-            HttpStatus.CREATED to "EHR state $ehrState activated."
-        } catch (e: Exception) {
-            HttpStatus.BAD_REQUEST to e.message
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
         }
 
-        return ResponseEntity.status(status).body(message)
     }
 
-    @PostMapping(value = ["suspend-ehr-state"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @PostMapping(value = ["suspend-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
     fun suspendPendingEHR (request: HttpServletRequest): ResponseEntity<String> {
+        val targetD = request.getParameter("target-doctor")
+                ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
+
+        val targetDX500Name = CordaX500Name.parse(targetD)
+        val targetDParty = proxy.wellKnownPartyFromX500Name(targetDX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
 
         val ehrId = request.getParameter("ehr-id")
         val ehrState = UniqueIdentifier.fromString(ehrId)
+        return try {
+            val signedTx = proxy.startTrackedFlow(::SuspendEHRFlow, targetDParty, ehrState).returnValue.getOrThrow()
+            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState suspended")
 
-        val (status, message) = try {
-            val flowHandle = proxy.startFlowDynamic(
-                    SuspendEHRFlow::class.java,
-                    ehrState
-            )
-
-            flowHandle.use { it.returnValue.getOrThrow() }
-            HttpStatus.CREATED to "EHR state $ehrState suspended."
-        } catch (e: Exception) {
-            HttpStatus.BAD_REQUEST to e.message
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
         }
-
-        return ResponseEntity.status(status).body(message)
     }
 
-    @PostMapping(value = ["delete-ehr-state"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @PostMapping(value = ["delete-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
     fun deletePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
 
+        val targetD = request.getParameter("counter-party")
+                ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
+
+        val counterPartyX500Name = CordaX500Name.parse(targetD)
+        val counterParty = proxy.wellKnownPartyFromX500Name(counterPartyX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
+
         val ehrId = request.getParameter("ehr-id")
         val ehrState = UniqueIdentifier.fromString(ehrId)
+        return try {
+            val signedTx = proxy.startTrackedFlow(::DeleteShareEHRAgreementFlow, counterParty, ehrState).returnValue.getOrThrow()
+            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState deleted")
 
-        val (status, message) = try {
-            val flowHandle = proxy.startFlowDynamic(
-                    DeleteShareEHRAgreementFlow::class.java,
-                    ehrState
-            )
-
-            flowHandle.use { it.returnValue.getOrThrow() }
-            HttpStatus.CREATED to "EHR state $ehrState deleted."
-        } catch (e: Exception) {
-            HttpStatus.BAD_REQUEST to e.message
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
         }
-
-        return ResponseEntity.status(status).body(message)
     }
 }
