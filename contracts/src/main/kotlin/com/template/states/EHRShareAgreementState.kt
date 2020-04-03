@@ -13,6 +13,7 @@ import net.corda.core.contracts.LinearState as LinearState
 
 // target doctor is an observer
 @BelongsToContract(EHRShareAgreementContract::class)
+@CordaSerializable
 data class EHRShareAgreementState(val patient: Party,
                                   val originDoctor: Party,
                                   val targetDoctor: Party,
