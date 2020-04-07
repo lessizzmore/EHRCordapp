@@ -166,31 +166,31 @@ class Controller(rpc: NodeRPCConnection) {
 //        return ok(maps)
 //    }
 
-//    @GetMapping(value = ["ehrs"])
-//    private fun getEHRs(): List<EHRShareAgreementState> {
-//        val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
-//        val states = ArrayList<EHRShareAgreementState>()
-//        stateRefs.forEach {
-//            states.add(it.state.data)
-//        }
-//        return states
-//    }
-
     @GetMapping(value = ["ehrs"])
-    private fun getEHRs(): ResponseEntity<String> {
-        return try {
-            val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
-            val states = ArrayList<EHRShareAgreementState>()
-            stateRefs.forEach {
-                states.add(it.state.data)
-            }
-            return ResponseEntity.status(HttpStatus.CREATED).body(states.toString())
-
-        } catch(ex: Throwable) {
-            logger.error(ex.message, ex)
-            ResponseEntity.badRequest().body(ex.message!!)
+    private fun getEHRs(): List<EHRShareAgreementState> {
+        val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
+        val states = ArrayList<EHRShareAgreementState>()
+        stateRefs.forEach {
+            states.add(it.state.data)
         }
+        return states
     }
+
+//    @GetMapping(value = ["ehrs"])
+//    private fun getEHRs(): ResponseEntity<String> {
+//        return try {
+//            val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
+//            val states = ArrayList<EHRShareAgreementState>()
+//            stateRefs.forEach {
+//                states.add(it.state.data)
+//            }
+//            return ResponseEntity.status(HttpStatus.CREATED).body(states.toString())
+//
+//        } catch(ex: Throwable) {
+//            logger.error(ex.message, ex)
+//            ResponseEntity.badRequest().body(ex.message!!)
+//        }
+//    }
 
     @GetMapping(value = ["ehr/{ehrId}"], produces = [APPLICATION_JSON_VALUE])
     private fun getEHR(@PathVariable ehrId: UUID): ResponseEntity<String> {
