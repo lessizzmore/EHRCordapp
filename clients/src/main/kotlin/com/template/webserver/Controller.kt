@@ -8,6 +8,7 @@ import com.template.states.EHRShareAgreementState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
@@ -23,7 +24,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.ResponseEntity
-import org.springframework.http.ResponseEntity.*
+import org.springframework.http.ResponseEntity.created
+import org.springframework.http.ResponseEntity.ok
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.io.FileInputStream
@@ -36,13 +38,14 @@ import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.servlet.http.HttpServletRequest
+import javax.xml.ws.Response
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 
 /**
  *  A Spring Boot Server API controller for interacting with the node via RPC.
  */
-val SERVICE_NAMES = listOf("Notary", "Network Map Service")
-
 @RestController
 @RequestMapping("/") // The paths for HTTP requests are relative to this base path.
 class Controller(rpc: NodeRPCConnection) {
@@ -60,19 +63,9 @@ class Controller(rpc: NodeRPCConnection) {
     @GetMapping(value = [ "me" ], produces = [ APPLICATION_JSON_VALUE ])
     fun whoami() = mapOf("me" to myLegalName)
 
-    /**
-     * Returns all parties registered with the network map service. These names can be used to look up identities using
-     * the identity service.
-     */
-    @GetMapping(value = [ "peers" ], produces = [ APPLICATION_JSON_VALUE ])
-    fun getPeers(): Map<String, List<CordaX500Name>> {
-        val nodeInfo = proxy.networkMapSnapshot()
-        return mapOf("peers" to nodeInfo
-                .map { it.legalIdentities.first().name }
-                //filter out myself, notary and eventual network map started by driver
-                .filter { it.organisation !in (SERVICE_NAMES + myLegalName.organisation) })
-    }
 
+    @GetMapping(value = ["status"])
+    private fun isAlive() = "Up and running!"
 
 
     @PostMapping
@@ -111,7 +104,7 @@ class Controller(rpc: NodeRPCConnection) {
         }
     }
 
-    @GetMapping("/{hash}")
+    @GetMapping("{hash}")
     fun downloadByHash(@PathVariable hash: String): ResponseEntity<Resource> {
         val inputStream = InputStreamResource(proxy.openAttachment(SecureHash.parse(hash)))
         return ok().header(
@@ -156,48 +149,99 @@ class Controller(rpc: NodeRPCConnection) {
         }
     }
 
-    /**
-     * Displays all EHR states that exist in the node's vault with pagination.
-     */
-    @GetMapping(value = ["ehrs"], produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun getEHRs(): MutableList<StateAndRef<EHRShareAgreementState>> {
+//    @GetMapping(value = ["ehrs"])
+//    private fun getPatients(): ResponseEntity<Any?> {
+//        val states = proxy.vaultQueryBy<EHRShareAgreementState>().states
+//        val maps = ArrayList<HashMap<String, Any>>()
+//        states.forEach {
+//            val responseMap = HashMap<String, Any>()
+//            responseMap["patient"] = it.state.data.patient
+//            responseMap["origin"] = it.state.data.originDoctor
+//            responseMap["target"] = it.state.data.targetDoctor
+//            responseMap["note"] = it.state.data.note.toString()
+//            responseMap["attachmentId"] = it.state.data.attachmentId.toString()
+//            responseMap["id"] = it.state.data.linearId.id
+//            maps.add(responseMap)
+//        }
+//        return ok(maps)
+//    }
 
-        var pageNumber = DEFAULT_PAGE_NUM
-        val pageSize = 200
-        val states = mutableListOf<StateAndRef<EHRShareAgreementState>>()
-        val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME), Sort.Direction.ASC)))
+//    @GetMapping(value = ["ehrs"])
+//    private fun getEHRs(): List<EHRShareAgreementState> {
+//        val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
+//        val states = ArrayList<EHRShareAgreementState>()
+//        stateRefs.forEach {
+//            states.add(it.state.data)
+//        }
+//        return states
+//    }
 
-        do {
-            val pageSpec = PageSpecification(pageNumber = pageNumber, pageSize = pageSize)
-            val results = proxy.vaultQueryBy(
-                    QueryCriteria.VaultQueryCriteria(),
-                    pageSpec,
-                    sorting,
-                    EHRShareAgreementState::class.java)
-            states.addAll(results.states)
-            pageNumber++
-        } while ((pageSpec.pageSize * (pageNumber - 1)) <= results.totalStatesAvailable)
+    @GetMapping(value = ["ehrs"])
+    private fun getEHRs(): ResponseEntity<String> {
+        return try {
+            val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
+            val states = ArrayList<EHRShareAgreementState>()
+            stateRefs.forEach {
+                states.add(it.state.data)
+            }
+            return ResponseEntity.status(HttpStatus.CREATED).body(states.toString())
 
-        return states
+        } catch(ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
+    }
+
+    @GetMapping(value = ["ehr/{ehrId}"], produces = [APPLICATION_JSON_VALUE])
+    private fun getEHR(@PathVariable ehrId: UUID): ResponseEntity<String> {
+
+        return try {
+            val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
+                    linearId = listOf(UniqueIdentifier(null,ehrId)))
+            val ehrStateRef =
+                    proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+            return ResponseEntity.status(HttpStatus.CREATED).body(ehrStateRef.state.data.toString())
+        } catch(ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
+
+    }
+
+    @GetMapping(value = ["ehr/{ehrId}/patient"], produces = [APPLICATION_JSON_VALUE])
+    private fun getPatient(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
+        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
+                linearId = listOf(UniqueIdentifier(null,ehrId)))
+    val ehrStateRef =
+            proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+    return ok(ehrStateRef.state.data.patient.toString())
+}
+
+
+    @GetMapping(value = ["ehr/{ehrId}/origin"], produces = [APPLICATION_JSON_VALUE])
+    private fun getOrigin(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
+        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
+                linearId = listOf(UniqueIdentifier(null,ehrId)))
+        val ehrStateRef =
+                proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+        return ok(ehrStateRef.state.data.originDoctor.toString())
     }
 
 
-    /**
-     * Initiates a flow to agree an EHR share between two parties.
-     *
-     * Once the flow finishes it will have written the EHR to ledger. Both the patient and the origin doctor will be able to
-     * see it on their respective nodes.
-     *
-     * This end-point takes a patient and a target-doctor name parameter as part of the path. If the serving node can't find the other party
-     * in its network map cache, it will return an HTTP bad request.
-     *
-     * The flow is invoked asynchronously. It returns a future when the flow's call() method returns.
-     */
-    @PostMapping(value = ["create-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @GetMapping(value = ["ehr/{ehrId}/target"], produces = [APPLICATION_JSON_VALUE])
+    private fun getTarget(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
+        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
+                linearId = listOf(UniqueIdentifier(null,ehrId)))
+        val ehrStateRef =
+                proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+        return ok(ehrStateRef.state.data.targetDoctor.toString())
+    }
+
+    @RequestMapping(value = ["create-ehr"], headers = ["Content-Type=application/json"])
     fun sendEHRShareRequest (request: HttpServletRequest): ResponseEntity<String> {
 
-        val patient = request.getParameter("patient")
-        val targetD = request.getParameter("target-doctor")
+            val patient = request.getParameter("patient")
+            val targetD = request.getParameter("target-doctor")
 
         if(patient == null){
             return ResponseEntity.badRequest().body("Query parameter 'patient' must not be null.\n")
@@ -221,24 +265,6 @@ class Controller(rpc: NodeRPCConnection) {
             ResponseEntity.badRequest().body(ex.message!!)
         }
 
-    }
-
-    @GetMapping(value = [ "patient-ehrs" ], produces = [ APPLICATION_JSON_VALUE ])
-    fun getPatientEHRs(): ResponseEntity<List<StateAndRef<EHRShareAgreementState>>>  {
-        val myehrs = proxy.vaultQueryBy<EHRShareAgreementState>().states.filter { it.state.data.patient.equals(proxy.nodeInfo().legalIdentities.first()) }
-        return ResponseEntity.ok(myehrs)
-    }
-
-    @GetMapping(value = [ "originD-ehrs" ], produces = [ APPLICATION_JSON_VALUE ])
-    fun getOriginDoctorEHRs(): ResponseEntity<List<StateAndRef<EHRShareAgreementState>>>  {
-        val myehrs = proxy.vaultQueryBy<EHRShareAgreementState>().states.filter { it.state.data.originDoctor.equals(proxy.nodeInfo().legalIdentities.first()) }
-        return ResponseEntity.ok(myehrs)
-    }
-
-    @GetMapping(value = [ "targetD-ehrs" ], produces = [ APPLICATION_JSON_VALUE ])
-    fun getTargetDoctorEHRs(): ResponseEntity<List<StateAndRef<EHRShareAgreementState>>>  {
-        val myehrs = proxy.vaultQueryBy<EHRShareAgreementState>().states.filter { it.state.data.targetDoctor.equals(proxy.nodeInfo().legalIdentities.first()) }
-        return ResponseEntity.ok(myehrs)
     }
 
     @PostMapping(value = ["activate-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])

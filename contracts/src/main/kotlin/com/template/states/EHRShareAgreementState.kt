@@ -1,5 +1,6 @@
 package com.template.states
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.template.contracts.EHRShareAgreementContract
 import com.template.schemas.EhrShareAgreementSchemaV1
 import net.corda.core.contracts.*
@@ -8,12 +9,12 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.toBase58String
 import net.corda.core.contracts.LinearState as LinearState
 
 
 // target doctor is an observer
 @BelongsToContract(EHRShareAgreementContract::class)
-@CordaSerializable
 data class EHRShareAgreementState(val patient: Party,
                                   val originDoctor: Party,
                                   val targetDoctor: Party,
@@ -28,7 +29,8 @@ data class EHRShareAgreementState(val patient: Party,
      *  lender or the borrower.
      */
     override val participants: List<Party> get() = listOfNotNull(originDoctor, patient)
-
+    fun getPatientParty(): Party { return patient }
+    fun getOriginDoctorParty() : Party {return originDoctor}
     override fun supportedSchemas(): Iterable<MappedSchema> = listOf(EhrShareAgreementSchemaV1)
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         if (!(schema is EhrShareAgreementSchemaV1)) throw Exception()
@@ -43,6 +45,9 @@ data class EHRShareAgreementState(val patient: Party,
                         linearId = linearId.id
         )
     }
+    override fun toString(): String {
+        return "EHRShareAgreementState(patient=$patient, originDoctor=$originDoctor, targetDoctor=$targetDoctor, note=$note, attachmentId=$attachmentId, status=$status, linearId=$linearId)"
+    }
 }
 
 /**
@@ -53,7 +58,11 @@ data class EHRShareAgreementState(val patient: Party,
  * [SUSPENDED] - Pending originDoctor can't share suspended EHRAgreementStates with others
  */
 @CordaSerializable
-enum class EHRShareAgreementStateStatus {
-    PENDING, ACTIVE, SUSPENDED, SHARED
+enum class EHRShareAgreementStateStatus(s: String) {
+    PENDING ("pending"),
+    ACTIVE("active"),
+    SUSPENDED("suspended"),
+    SHARED("shared")
 }
+
 

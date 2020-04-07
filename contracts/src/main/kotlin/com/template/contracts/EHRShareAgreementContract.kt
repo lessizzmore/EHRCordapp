@@ -42,8 +42,10 @@ class EHRShareAgreementContract : Contract {
         "No inputs should be consumed when issuing a EHRAgreementState." using (tx.inputs.isEmpty())
         "Only one output state should be created when creating a EHRState." using (tx.outputs.size == 1)
         "Creating a EHRAgreementState should contain an output in PENDING status." using (outputEHRState.status == EHRShareAgreementStateStatus.PENDING)
+        "Origin doctor and target doctor shouldn't be the same." using (outputEHRState.originDoctor != outputEHRState.targetDoctor)
+        "Origin doctor, patient and target doctor should be distinct" using (listOf(outputEHRState.originDoctor, outputEHRState.patient, outputEHRState.targetDoctor).distinct().size == 3)
 //        "Both participants must sign the tx" using (signers == output.participants.map { it.owningKey })
-    }
+}
 
     private fun verifySuspend(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
         val command = tx.commands.requireSingleCommand<Commands>()
