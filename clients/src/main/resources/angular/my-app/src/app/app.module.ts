@@ -13,6 +13,9 @@ import { EhrService } from './services/ehr.service';
 import { NotificationService } from './services/notification.service';
 import { HttpClientModule } from '@angular/common/http';
 import { OriginActionFormComponent } from './origin-action-form/origin-action-form.component';
+import { PatientActionFormComponent } from './patient-action-form/patient-action-form.component';
+import { PatientEhrComponent } from './patient-ehr/patient-ehr.component';
+import { TargetEhrComponent } from './target-ehr/target-ehr.component';
 
 @NgModule({
   declarations: [
@@ -20,6 +23,9 @@ import { OriginActionFormComponent } from './origin-action-form/origin-action-fo
     EhrsComponent,
     EhrFormComponent,
     OriginActionFormComponent,
+    PatientActionFormComponent,
+    PatientEhrComponent,
+    TargetEhrComponent,
   ],
   imports: [
     BrowserModule,
