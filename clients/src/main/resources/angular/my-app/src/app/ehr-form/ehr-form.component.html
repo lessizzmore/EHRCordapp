@@ -3,20 +3,16 @@
     <br>
     <form [formGroup]="ehrForm" (ngSubmit)="onSubmit(ehrForm.value)" style="width: 500px;">
       <div class="form-group">
-        <label for="patient">patient</label>
-        <input type="text" class="form-control" id="patient" formControlName="patient">
+        <input type="text" class="form-control" id="patient" formControlName="patient" placeholder="Patient">
       </div>
       <div class="form-group">
-        <label for="targetDoctor">target doctor</label>
-        <input type="text" class="form-control" id="targetDoctor" formControlName="targetDoctor">
+        <input type="text" class="form-control" id="targetDoctor" formControlName="targetDoctor" placeholder="Target Doctor">
       </div>
       <div class="form-group">
-        <label for="note">note</label>
-        <input type="text" class="form-control" id="note" formControlName="note">
+        <input type="text" class="form-control" id="note" formControlName="note" placeholder="Note">
       </div>
       <div class="form-group">
-        <label for="note">attachmentId</label>
-        <input type="text" class="form-control" id="attachmentId" formControlName="attachmentId">
+        <input type="text" class="form-control" id="attachmentId" formControlName="attachmentId" placeholder="Attachment Id">
       </div>
 
       <button type="submit" class="btn btn-primary">Submit</button>
