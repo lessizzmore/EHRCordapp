@@ -269,7 +269,7 @@ class Controller(rpc: NodeRPCConnection) {
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
-    @PostMapping(value = ["activate"], headers = ["Content-Type=application/json"])
+    @PostMapping(value = ["activate"])
     fun activatePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
         val targetD = request.getParameter("targetD")
                 ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
@@ -291,7 +291,7 @@ class Controller(rpc: NodeRPCConnection) {
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
-    @PostMapping(value = ["suspend"], headers = ["Content-Type=application/json"])
+    @PostMapping(value = ["suspend"])
     fun suspendPendingEHR (request: HttpServletRequest): ResponseEntity<String> {
         val targetD = request.getParameter("targetD")
                 ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")

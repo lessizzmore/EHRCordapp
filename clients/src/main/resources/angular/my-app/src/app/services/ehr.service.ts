@@ -59,7 +59,7 @@ export class EhrService {
           );
     }
 
-    deleteEhr(id:string): Observable<EHR> {
+    deleteEhr(counterParty: string, id:string): Observable<EHR> {
         const httpOptions = {
             headers: new HttpHeaders({
               'Content-Type':  'application/json'
@@ -69,13 +69,11 @@ export class EhrService {
         httpOptions.headers.append('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE,PUT')
         httpOptions.headers.append('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         const requestUrl = this.origin_doctor_resource
-         + 'request?patient=' + ehr.patient
-         + '&targetD=' + ehr.targetDoctor
-         + '&note=' + ehr.note
-         + '&attachmentId=' + ehr.attachmentId;
+         + 'delete?counterParty=' + counterParty
+         + '&ehrId=' + id;
         console.log("url:" + requestUrl)
-        return this.http.post<EHR>(requestUrl, ehr, httpOptions).pipe(
-            catchError(this.handleError<EHR>('createEHR'))
+        return this.http.post<EHR>(requestUrl, httpOptions).pipe(
+            catchError(this.handleError<EHR>('deleteEHR'))
           );
     }
 

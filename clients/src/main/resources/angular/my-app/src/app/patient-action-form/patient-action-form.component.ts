@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { FormBuilder } from '@angular/forms';
+import { EhrService } from '../services/ehr.service';
 
 @Component({
   selector: 'app-patient-action-form',
@@ -7,9 +9,27 @@ import { Component, OnInit } from '@angular/core';
 })
 export class PatientActionFormComponent implements OnInit {
 
-  constructor() { }
+  paForm;
+
+  constructor(private formBuilder: FormBuilder, private ehrSvc: EhrService) { 
+    this.paForm = this.formBuilder.group({
+      id: '',
+    });
+  }
 
   ngOnInit(): void {
   }
 
+
+  onDelete() {
+
+  }
+
+  onSuspend() {
+
+  }
+
+  onActivate() {
+
+  }
 }
