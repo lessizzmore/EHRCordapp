@@ -1,9 +1,6 @@
 package com.template.webserver
 
-import com.template.flows.ActivateEHRFlow
-import com.template.flows.DeleteShareEHRAgreementFlow
-import com.template.flows.RequestShareEHRAgreementFlow
-import com.template.flows.SuspendEHRFlow
+import com.template.flows.*
 import com.template.states.EHRShareAgreementState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
@@ -149,59 +146,36 @@ class Controller(rpc: NodeRPCConnection) {
         }
     }
 
-//    @GetMapping(value = ["ehrs"])
-//    private fun getPatients(): ResponseEntity<Any?> {
-//        val states = proxy.vaultQueryBy<EHRShareAgreementState>().states
-//        val maps = ArrayList<HashMap<String, Any>>()
-//        states.forEach {
-//            val responseMap = HashMap<String, Any>()
-//            responseMap["patient"] = it.state.data.patient
-//            responseMap["origin"] = it.state.data.originDoctor
-//            responseMap["target"] = it.state.data.targetDoctor
-//            responseMap["note"] = it.state.data.note.toString()
-//            responseMap["attachmentId"] = it.state.data.attachmentId.toString()
-//            responseMap["id"] = it.state.data.linearId.id
-//            maps.add(responseMap)
-//        }
-//        return ok(maps)
-//    }
-
     @CrossOrigin(origins = ["http://localhost:4200"])
     @GetMapping(value = ["ehrs"])
-    private fun getEHRs(): List<EHRShareAgreementState> {
-        val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
-        val states = ArrayList<EHRShareAgreementState>()
-        stateRefs.forEach {
-            states.add(it.state.data)
+    private fun getEHRs(): ResponseEntity<Any?> {
+        return try {
+            val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
+            val states = ArrayList<EHRShareAgreementState>()
+            stateRefs.forEach {
+                states.add(it.state.data)
+            }
+            ResponseEntity.status(HttpStatus.OK).body(states)
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
         }
-        return states
     }
-
-//    @GetMapping(value = ["ehrs"])
-//    private fun getEHRs(): ResponseEntity<String> {
-//        return try {
-//            val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
-//            val states = ArrayList<EHRShareAgreementState>()
-//            stateRefs.forEach {
-//                states.add(it.state.data)
-//            }
-//            return ResponseEntity.status(HttpStatus.CREATED).body(states.toString())
-//
-//        } catch(ex: Throwable) {
-//            logger.error(ex.message, ex)
-//            ResponseEntity.badRequest().body(ex.message!!)
-//        }
-//    }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
     @GetMapping(value = ["ehr/{ehrId}"])
-    private fun getEHR(@PathVariable ehrId: UUID): EHRShareAgreementState {
-
-            val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
-                    linearId = listOf(UniqueIdentifier(null,ehrId)))
-            val ehrStateRef =
-                    proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
-            return ehrStateRef.state.data
+    private fun getEHR(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
+            return try {
+                val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
+                        linearId = listOf(UniqueIdentifier(null, ehrId)))
+                val ehrStateRef =
+                        proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()
+                                ?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+                ResponseEntity.status(HttpStatus.OK).body(ehrStateRef.state.data)
+            }catch (ex: Throwable) {
+                logger.error(ex.message, ex)
+                ResponseEntity.badRequest().body(ex.message!!)
+            }
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
@@ -209,9 +183,9 @@ class Controller(rpc: NodeRPCConnection) {
     private fun getPatient(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
                 linearId = listOf(UniqueIdentifier(null,ehrId)))
-    val ehrStateRef =
+        val ehrStateRef =
             proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
-    return ok(ehrStateRef.state.data.patient.toString())
+        return ok(ehrStateRef.state.data.patient.toString())
 }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
@@ -259,7 +233,9 @@ class Controller(rpc: NodeRPCConnection) {
 
         return try {
             val signedTx = proxy.startTrackedFlow(::RequestShareEHRAgreementFlow, patientParty, targetDParty, note, attachmentId).returnValue.getOrThrow()
-            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n")
+            ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body("Transaction id ${signedTx.id} committed to ledger.\n")
 
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)
@@ -281,7 +257,9 @@ class Controller(rpc: NodeRPCConnection) {
         val ehrState = UniqueIdentifier.fromString(ehrId)
         return try {
             val signedTx = proxy.startTrackedFlow(::ActivateEHRFlow, targetDParty, ehrState).returnValue.getOrThrow()
-            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState activated")
+            ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState activated")
 
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)
@@ -303,7 +281,9 @@ class Controller(rpc: NodeRPCConnection) {
         val ehrState = UniqueIdentifier.fromString(ehrId)
         return try {
             val signedTx = proxy.startTrackedFlow(::SuspendEHRFlow, targetDParty, ehrState).returnValue.getOrThrow()
-            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState suspended")
+            ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState suspended")
 
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)
@@ -325,7 +305,40 @@ class Controller(rpc: NodeRPCConnection) {
         val ehrState = UniqueIdentifier.fromString(ehrId)
         return try {
             val signedTx = proxy.startTrackedFlow(::DeleteShareEHRAgreementFlow, counterParty, ehrState).returnValue.getOrThrow()
-            ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState deleted")
+            ResponseEntity.status(HttpStatus.OK).body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState deleted")
+
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
+    }
+
+    @CrossOrigin(origins = ["http://localhost:4200"])
+    @PostMapping(value = ["share"])
+    fun shareActivatedEHR (request: HttpServletRequest): ResponseEntity<String> {
+        val patient = request.getParameter("patient")
+        val targetD = request.getParameter("targetD")
+
+        if(patient == null){
+            return ResponseEntity.badRequest().body("Query parameter 'patient' must not be null.\n")
+        }
+        if(targetD == null){
+            return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
+        }
+
+        val patientX500Name = CordaX500Name.parse(patient)
+        val patientParty = proxy.wellKnownPartyFromX500Name(patientX500Name) ?: return ResponseEntity.badRequest().body("Party named $patient cannot be found.\n")
+        val targetDX500Name = CordaX500Name.parse(targetD)
+        val targetDParty = proxy.wellKnownPartyFromX500Name(targetDX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
+
+
+        val ehrId = request.getParameter("ehrId")
+        val ehrState = UniqueIdentifier.fromString(ehrId)
+        return try {
+            val signedTx = proxy.startTrackedFlow(::ShareEHRFlow, patientParty,  targetDParty, ehrState).returnValue.getOrThrow()
+            ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body("Transaction id ${signedTx.id} committed to ledger.\n EHR $ehrState shared")
 
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)

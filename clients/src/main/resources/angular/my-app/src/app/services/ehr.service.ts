@@ -21,8 +21,6 @@ export class EhrService {
     }
 
 
-
-
     getOriginEhrs():Observable<EHR[]> {
         const httpOptions = {
             headers: new HttpHeaders({
@@ -36,6 +34,21 @@ export class EhrService {
         return this.http.get<EHR[]>(requestUrl, httpOptions).pipe(
             catchError(this.handleError<EHR[]>('getEHRs', []))
           );
+    }
+
+    getTargetEhrs() {
+      const httpOptions = {
+        headers: new HttpHeaders({
+          'Content-Type':  'application/json'
+        })
+      };
+      httpOptions.headers.append('Access-Control-Allow-Origin', '*');
+      httpOptions.headers.append('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE,PUT')
+      httpOptions.headers.append('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      const requestUrl = this.target_doctor_resource + 'ehrs';
+      return this.http.get<EHR[]>(requestUrl, httpOptions).pipe(
+          catchError(this.handleError<EHR[]>('getEHRs', []))
+        );
     }
 
     postEhr(ehr: EHR): Observable<EHR> {
@@ -59,7 +72,7 @@ export class EhrService {
           );
     }
 
-    deleteEhr(counterParty: string, id:string): Observable<EHR> {
+    deleteOriginEhr(counterParty: string, id:string): Observable<EHR> {
         const httpOptions = {
             headers: new HttpHeaders({
               'Content-Type':  'application/json'
@@ -77,6 +90,82 @@ export class EhrService {
           );
     }
 
+    deletePatientEhr(counterParty: string, id:string): Observable<EHR> {
+      const httpOptions = {
+          headers: new HttpHeaders({
+            'Content-Type':  'application/json'
+          })
+        };
+      httpOptions.headers.append('Access-Control-Allow-Origin', '*');
+      httpOptions.headers.append('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE,PUT')
+      httpOptions.headers.append('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      const requestUrl = this.patient_resource
+       + 'delete?counterParty=' + counterParty
+       + '&ehrId=' + id;
+      console.log("url:" + requestUrl)
+      return this.http.post<EHR>(requestUrl, httpOptions).pipe(
+          catchError(this.handleError<EHR>('deleteEHR'))
+        );
+  }
+
+
+
+    shareEhr(patient:string, target: string, id:string): Observable<EHR> {
+      const httpOptions = {
+          headers: new HttpHeaders({
+            'Content-Type':  'application/json'
+          })
+        };
+      httpOptions.headers.append('Access-Control-Allow-Origin', '*');
+      httpOptions.headers.append('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE,PUT')
+      httpOptions.headers.append('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      const requestUrl = this.origin_doctor_resource
+      + 'share?patient=' + patient
+      + '&targetD=' + target
+      + '&ehrId=' + id;
+      console.log("url:" + requestUrl)
+      return this.http.post<EHR>(requestUrl, httpOptions).pipe(
+          catchError(this.handleError<EHR>('shareEHR'))
+        );
+  }
+
+
+    suspendEhr(target: string, id:string): Observable<EHR> {
+      const httpOptions = {
+          headers: new HttpHeaders({
+            'Content-Type':  'application/json'
+          })
+        };
+      httpOptions.headers.append('Access-Control-Allow-Origin', '*');
+      httpOptions.headers.append('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE,PUT')
+      httpOptions.headers.append('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      const requestUrl = this.patient_resource
+      + 'suspend?targetD=' + target
+      + '&ehrId=' + id;
+      console.log("url:" + requestUrl)
+      return this.http.post<EHR>(requestUrl, httpOptions).pipe(
+          catchError(this.handleError<EHR>('suspendEHR'))
+        );
+    }
+
+
+    activateEhr(target: string, id:string): Observable<EHR> {
+      const httpOptions = {
+          headers: new HttpHeaders({
+            'Content-Type':  'application/json'
+          })
+        };
+      httpOptions.headers.append('Access-Control-Allow-Origin', '*');
+      httpOptions.headers.append('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE,PUT')
+      httpOptions.headers.append('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      const requestUrl = this.patient_resource
+      + 'activate?targetD=' + target
+      + '&ehrId=' + id;
+      console.log("url:" + requestUrl)
+      return this.http.post<EHR>(requestUrl, httpOptions).pipe(
+          catchError(this.handleError<EHR>('activateEHR'))
+        );
+    }
 
 /**
  * Handle Http operation that failed.

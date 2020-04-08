@@ -26,22 +26,28 @@ export class OriginActionFormComponent extends MessagesComponentComponent implem
   onDelete() {
     let id = this.oaForm.get('id').value
     id = id.trim();
-    this.ehrSvc.deleteEhr('O=PartyA,L=New York,C=US,CN=Patient', id).subscribe(
+    this.ehrSvc.deleteOriginEhr('O=PartyA,L=New York,C=US,CN=Patient', id).subscribe(
       data => {
         console.log(data)
-        this.errorMsg = "Ehr record with id: " + id + " deleted successfully."
-        this.showMessage(this.errorMsg, false);
       },
       error => {
         console.log('failed' + error)
-        this.errorMsg = "Delete failed."
-        this.showMessage(this.errorMsg, true)
       }
     );
     this.oaForm.reset();
   }
 
   onShare() {
-
+    let id = this.oaForm.get('id').value
+    id = id.trim();
+    this.ehrSvc.shareEhr('O=PartyA,L=New York,C=US,CN=Patient', 'O=PartyC,L=New York,C=US,CN=TargetDoctor', id).subscribe(
+      data => {
+        console.log(data)
+      },
+      error => {
+        console.log('failed' + error)
+      }
+    );
+    this.oaForm.reset();
   }
 }

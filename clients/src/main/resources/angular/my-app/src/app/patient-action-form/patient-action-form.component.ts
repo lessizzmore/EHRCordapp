@@ -22,14 +22,51 @@ export class PatientActionFormComponent implements OnInit {
 
 
   onDelete() {
+    let id = this.paForm.get('id').value
+    id = id.trim();
+    this.ehrSvc.deletePatientEhr('O=PartyB,L=New York,C=US,CN=OriginDoctor', id).subscribe(
+      data => {
+        console.log(data)
+      },
+      error => {
+        console.log('failed' + error)
 
+      }
+    );
+    this.paForm.reset();
   }
 
   onSuspend() {
 
+    let id = this.paForm.get('id').value
+    id = id.trim();
+    this.ehrSvc.suspendEhr('O=PartyB,L=New York,C=US,CN=OriginDoctor', id).subscribe(
+      data => {
+        console.log(data)
+      },
+      error => {
+        console.log('failed' + error)
+
+      }
+    );
+    this.paForm.reset();
+
   }
 
   onActivate() {
+
+    let id = this.paForm.get('id').value
+    id = id.trim();
+    this.ehrSvc.activateEhr('O=PartyB,L=New York,C=US,CN=OriginDoctor', id).subscribe(
+      data => {
+        console.log(data)
+      },
+      error => {
+        console.log('failed' + error)
+
+      }
+    );
+    this.paForm.reset();
 
   }
 }

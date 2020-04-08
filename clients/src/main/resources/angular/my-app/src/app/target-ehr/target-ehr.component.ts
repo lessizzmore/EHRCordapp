@@ -21,7 +21,7 @@ export class TargetEhrComponent implements OnInit {
   constructor(private ehrSvc: EhrService) { }
 
   ngOnInit(): void {
-    this.ehrSvc.getOriginEhrs().subscribe(
+    this.ehrSvc.getTargetEhrs().subscribe(
       ehrs => {
         this.ehrs = ehrs;
         console.log(this.ehrs)
