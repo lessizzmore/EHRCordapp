@@ -1,11 +1,10 @@
 import { Status } from './status';
 
-export interface EHR {
-    id: number
-    patient: string,
-    originDoctor: string,
-    targetDoctor: string,
-    status: Status,
-    note: string,
-    attachmentId: string
+export class EHR {
+    patient: string;
+    originDoctor: string;
+    targetDoctor: string;
+    status: string;
+    note: string;
+    attachmentId: string;
 }

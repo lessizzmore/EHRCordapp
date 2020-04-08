@@ -6,9 +6,12 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AngularMaterialModule } from './angular-material.module';
 import { EhrsComponent } from './ehrs/ehrs.component';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { EhrFormComponent } from './ehr-form/ehr-form.component';
 import { MatTableModule } from '@angular/material/table';
+import { EhrService } from './services/ehr.service';
+import { NotificationService } from './services/notification.service';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -22,9 +25,14 @@ import { MatTableModule } from '@angular/material/table';
     BrowserAnimationsModule,
     AngularMaterialModule,
     FormsModule,
-    MatTableModule
+    MatTableModule,
+    HttpClientModule,
+    ReactiveFormsModule
   ],
-  providers: [],
+  providers: [
+    EhrService,
+    NotificationService
+  ],
   bootstrap: [AppComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })

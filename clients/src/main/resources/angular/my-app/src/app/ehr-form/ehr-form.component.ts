@@ -1,4 +1,10 @@
 import { Component, OnInit } from '@angular/core';
+import { EhrService } from '../services/ehr.service';
+import { FormBuilder } from '@angular/forms';
+import { EHR } from '../ehr';
+import {FormsModule,ReactiveFormsModule} from '@angular/forms';
+import { create } from 'domain';
+
 
 @Component({
   selector: 'app-ehr-form',
@@ -6,14 +12,33 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./ehr-form.component.scss']
 })
 export class EhrFormComponent implements OnInit {
-
-  patients = ['patient 1', 'patient 2', 'patient 3'];
-  targetDoctors = ['targetDoctor 1', 'targetDoctor 2'];
-
-
-  constructor() { }
+  ehrForm;
+  ehr: EHR;
+  constructor(private ehrSvc: EhrService, private formBuilder: FormBuilder) {
+    this.ehrForm = this.formBuilder.group({
+      patient: '',
+      targetDoctor: '',
+      note: '',
+      attachmentId: ''
+    });
+   }
 
   ngOnInit(): void {
+  }
+
+  onSubmit(data) {
+    this.ehr = new EHR();
+    this.ehr.patient = data.patient;
+    this.ehr.targetDoctor = data.targetDoctor;
+    this.ehr.note = data.note;
+    this.ehr.attachmentId = data.attachmentId;    
+    console.log("data.patient:" + data.patient)
+    this.ehrSvc.postEhr(this.ehr).subscribe(
+      ehr => {
+        console.log(ehr);
+      }
+    );
+    console.warn('Your form has been submitted', data);
   }
 
 }

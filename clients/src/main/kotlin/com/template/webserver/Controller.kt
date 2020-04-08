@@ -166,6 +166,7 @@ class Controller(rpc: NodeRPCConnection) {
 //        return ok(maps)
 //    }
 
+    @CrossOrigin(origins = ["http://localhost:4200"])
     @GetMapping(value = ["ehrs"])
     private fun getEHRs(): List<EHRShareAgreementState> {
         val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
@@ -192,6 +193,7 @@ class Controller(rpc: NodeRPCConnection) {
 //        }
 //    }
 
+    @CrossOrigin(origins = ["http://localhost:4200"])
     @GetMapping(value = ["ehr/{ehrId}"], produces = [APPLICATION_JSON_VALUE])
     private fun getEHR(@PathVariable ehrId: UUID): ResponseEntity<String> {
 
@@ -208,6 +210,7 @@ class Controller(rpc: NodeRPCConnection) {
 
     }
 
+    @CrossOrigin(origins = ["http://localhost:4200"])
     @GetMapping(value = ["ehr/{ehrId}/patient"], produces = [APPLICATION_JSON_VALUE])
     private fun getPatient(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
@@ -217,7 +220,7 @@ class Controller(rpc: NodeRPCConnection) {
     return ok(ehrStateRef.state.data.patient.toString())
 }
 
-
+    @CrossOrigin(origins = ["http://localhost:4200"])
     @GetMapping(value = ["ehr/{ehrId}/origin"], produces = [APPLICATION_JSON_VALUE])
     private fun getOrigin(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
@@ -227,7 +230,7 @@ class Controller(rpc: NodeRPCConnection) {
         return ok(ehrStateRef.state.data.originDoctor.toString())
     }
 
-
+    @CrossOrigin(origins = ["http://localhost:4200"])
     @GetMapping(value = ["ehr/{ehrId}/target"], produces = [APPLICATION_JSON_VALUE])
     private fun getTarget(@PathVariable ehrId: UUID): ResponseEntity<Any?> {
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
@@ -237,11 +240,15 @@ class Controller(rpc: NodeRPCConnection) {
         return ok(ehrStateRef.state.data.targetDoctor.toString())
     }
 
-    @RequestMapping(value = ["create-ehr"], headers = ["Content-Type=application/json"])
+    @CrossOrigin(origins = ["http://localhost:4200"])
+    @RequestMapping(value = ["request"], headers = ["Content-Type=application/json"])
     fun sendEHRShareRequest (request: HttpServletRequest): ResponseEntity<String> {
 
-            val patient = request.getParameter("patient")
-            val targetD = request.getParameter("target-doctor")
+        val patient = request.getParameter("patient")
+        val targetD = request.getParameter("targetD")
+        val note = request.getParameter("note")
+        val attachmentId = request.getParameter("attachmentId")
+
 
         if(patient == null){
             return ResponseEntity.badRequest().body("Query parameter 'patient' must not be null.\n")
@@ -257,7 +264,7 @@ class Controller(rpc: NodeRPCConnection) {
 
 
         return try {
-            val signedTx = proxy.startTrackedFlow(::RequestShareEHRAgreementFlow, patientParty, targetDParty).returnValue.getOrThrow()
+            val signedTx = proxy.startTrackedFlow(::RequestShareEHRAgreementFlow, patientParty, targetDParty, note, attachmentId).returnValue.getOrThrow()
             ResponseEntity.status(HttpStatus.CREATED).body("Transaction id ${signedTx.id} committed to ledger.\n")
 
         } catch (ex: Throwable) {

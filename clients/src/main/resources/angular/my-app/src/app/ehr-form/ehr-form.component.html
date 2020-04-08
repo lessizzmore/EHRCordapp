@@ -1,22 +1,22 @@
 <div class="container">
     <br>
     <br>
-    <form>
+    <form [formGroup]="ehrForm" (ngSubmit)="onSubmit(ehrForm.value)">
       <div class="form-group">
         <label for="patient">patient</label>
-        <input type="text" class="form-control" id="patient">
+        <input type="text" class="form-control" id="patient" formControlName="patient">
       </div>
       <div class="form-group">
         <label for="targetDoctor">target doctor</label>
-        <input type="text" class="form-control" id="targetDoctor">
+        <input type="text" class="form-control" id="targetDoctor" formControlName="targetDoctor">
       </div>
       <div class="form-group">
         <label for="note">note</label>
-        <input type="text" class="form-control" id="note">
+        <input type="text" class="form-control" id="note" formControlName="note">
       </div>
       <div class="form-group">
-        <label for="note">attachment</label>
-        <input type="text" class="form-control" id="attachment">
+        <label for="note">attachmentId</label>
+        <input type="text" class="form-control" id="attachmentId" formControlName="attachmentId">
       </div>
 
       <button type="submit" class="btn btn-success">Submit</button>
