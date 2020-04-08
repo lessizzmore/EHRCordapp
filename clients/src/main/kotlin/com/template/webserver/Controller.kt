@@ -194,20 +194,14 @@ class Controller(rpc: NodeRPCConnection) {
 //    }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
-    @GetMapping(value = ["ehr/{ehrId}"], produces = [APPLICATION_JSON_VALUE])
-    private fun getEHR(@PathVariable ehrId: UUID): ResponseEntity<String> {
+    @GetMapping(value = ["ehr/{ehrId}"])
+    private fun getEHR(@PathVariable ehrId: UUID): EHRShareAgreementState {
 
-        return try {
             val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
                     linearId = listOf(UniqueIdentifier(null,ehrId)))
             val ehrStateRef =
                     proxy.vaultQueryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
-            return ResponseEntity.status(HttpStatus.CREATED).body(ehrStateRef.state.data.toString())
-        } catch(ex: Throwable) {
-            logger.error(ex.message, ex)
-            ResponseEntity.badRequest().body(ex.message!!)
-        }
-
+            return ehrStateRef.state.data
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
@@ -318,7 +312,7 @@ class Controller(rpc: NodeRPCConnection) {
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
-    @PostMapping(value = ["delete"], headers = ["Content-Type=application/json"])
+    @PostMapping(value = ["delete"])
     fun deletePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
 
         val targetD = request.getParameter("counterParty")

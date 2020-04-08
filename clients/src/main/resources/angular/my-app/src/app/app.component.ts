@@ -21,19 +21,19 @@ export class AppComponent implements OnInit{
   constructor(private router: Router) { 
     this.navLinks = [
       {
-          label: 'form',
+          label: 'EHR Form',
           link: './form',
           index: 0
       }, {
-          label: 'origin',
+          label: 'Origin Doctor',
           link: './origin',
           index: 1
       }, {
-          label: 'patient',
+          label: 'Patient',
           link: './patient',
           index: 2
       }, {
-        label: 'target',
+        label: 'Target Doctor',
         link: './target',
         index: 3
       }
