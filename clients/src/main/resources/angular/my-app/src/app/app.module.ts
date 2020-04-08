@@ -8,7 +8,6 @@ import { AngularMaterialModule } from './angular-material.module';
 import { EhrsComponent } from './ehrs/ehrs.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { EhrFormComponent } from './ehr-form/ehr-form.component';
-import { MatTableModule } from '@angular/material/table';
 import { EhrService } from './services/ehr.service';
 import { NotificationService } from './services/notification.service';
 import { HttpClientModule } from '@angular/common/http';
@@ -16,6 +15,15 @@ import { OriginActionFormComponent } from './origin-action-form/origin-action-fo
 import { PatientActionFormComponent } from './patient-action-form/patient-action-form.component';
 import { PatientEhrComponent } from './patient-ehr/patient-ehr.component';
 import { TargetEhrComponent } from './target-ehr/target-ehr.component';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import {MatCardModule} from '@angular/material/card';
+import {MatToolbarModule} from '@angular/material/toolbar';
+import {MatIconModule} from '@angular/material/icon';
+import {MatProgressBarModule} from '@angular/material/progress-bar';
+
+
+
 
 @NgModule({
   declarations: [
@@ -35,7 +43,12 @@ import { TargetEhrComponent } from './target-ehr/target-ehr.component';
     FormsModule,
     MatTableModule,
     HttpClientModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    MatToolbarModule,  
+    MatIconModule,  
+    MatButtonModule,  
+    MatCardModule,  
+    MatProgressBarModule 
   ],
   providers: [
     EhrService,
