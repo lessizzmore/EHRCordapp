@@ -2,8 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { EhrService } from '../services/ehr.service';
 import { FormBuilder } from '@angular/forms';
 import { EHR } from '../ehr';
-import {FormsModule,ReactiveFormsModule} from '@angular/forms';
-import { create } from 'domain';
 
 
 @Component({

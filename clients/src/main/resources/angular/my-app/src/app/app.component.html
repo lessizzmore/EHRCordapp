@@ -1,4 +1,4 @@
-
+<!-- 
 <mat-tab-group animationDuration="0ms"> 
   <mat-tab label="Origin Doctor Form">
     <app-ehr-form></app-ehr-form>
@@ -16,4 +16,16 @@
 
 <div>
   <img class="power-by" src="assets/img/corda.png" alt="Corda"/>
-</div>
+</div> -->
+
+<nav mat-tab-nav-bar>
+  <a mat-tab-link
+     *ngFor="let link of navLinks"
+     [routerLink]="link.link"
+     routerLinkActive #rla="routerLinkActive"
+     [active]="rla.isActive">
+    {{link.label}}
+  </a>
+</nav>
+
+<router-outlet></router-outlet>
