@@ -3,6 +3,7 @@ import { EHR } from '../ehr';
 import {MatPaginator} from '@angular/material/paginator';
 import {MatTableDataSource} from '@angular/material/table';
 import { EhrService } from '../services/ehr.service';
+import { OriginActionFormComponent } from '../origin-action-form/origin-action-form.component';
 
 @Component({
   selector: 'app-ehrs',
@@ -10,16 +11,12 @@ import { EhrService } from '../services/ehr.service';
   styleUrls: ['./ehrs.component.scss']
 })
 export class EhrsComponent implements OnInit {
-  displayedColumns: string[] = ['patient', 'origin', 'target', 'status', 'note', 'attachmentId', 'action'];
+  displayedColumns: string[] = ['id', 'patient', 'origin', 'target', 'status', 'note', 'attachmentId'];
   ehrs: EHR[];
   dataSource: MatTableDataSource<EHR>;
 
   @ViewChild(MatPaginator, {static: true}) paginator: MatPaginator;
-  @Input() patient: string;
-  @Input() targetD: string;
-  @Input() originD: string;
-  @Input() note: string;
-  @Input() attachmentId: string;
+  @ViewChild(OriginActionFormComponent) private originActionComponent: OriginActionFormComponent;
 
 
   constructor(private ehrSvc: EhrService) { }
@@ -28,14 +25,10 @@ export class EhrsComponent implements OnInit {
     this.ehrSvc.getOriginEhrs().subscribe(
       ehrs => {
         this.ehrs = ehrs;
+        console.log(this.ehrs)
         this.dataSource = new MatTableDataSource<EHR>(this.ehrs);
       }
     );
   }
-
-  refresh() {
-    
-  }
-
   
 }

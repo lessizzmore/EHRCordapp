@@ -12,12 +12,14 @@ import { MatTableModule } from '@angular/material/table';
 import { EhrService } from './services/ehr.service';
 import { NotificationService } from './services/notification.service';
 import { HttpClientModule } from '@angular/common/http';
+import { OriginActionFormComponent } from './origin-action-form/origin-action-form.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     EhrsComponent,
     EhrFormComponent,
+    OriginActionFormComponent,
   ],
   imports: [
     BrowserModule,

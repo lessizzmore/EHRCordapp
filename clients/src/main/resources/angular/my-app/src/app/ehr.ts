@@ -1,6 +1,7 @@
-import { Status } from './status';
+import { LinearId } from './linearid';
 
 export class EHR {
+    linearId: LinearId;
     patient: string;
     originDoctor: string;
     targetDoctor: string;

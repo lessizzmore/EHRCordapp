@@ -274,15 +274,16 @@ class Controller(rpc: NodeRPCConnection) {
 
     }
 
-    @PostMapping(value = ["activate-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @CrossOrigin(origins = ["http://localhost:4200"])
+    @PostMapping(value = ["activate"], headers = ["Content-Type=application/json"])
     fun activatePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
-        val targetD = request.getParameter("target-doctor")
+        val targetD = request.getParameter("targetD")
                 ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
 
         val targetDX500Name = CordaX500Name.parse(targetD)
         val targetDParty = proxy.wellKnownPartyFromX500Name(targetDX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
 
-        val ehrId = request.getParameter("ehr-id")
+        val ehrId = request.getParameter("ehrId")
         val ehrState = UniqueIdentifier.fromString(ehrId)
         return try {
             val signedTx = proxy.startTrackedFlow(::ActivateEHRFlow, targetDParty, ehrState).returnValue.getOrThrow()
@@ -295,15 +296,16 @@ class Controller(rpc: NodeRPCConnection) {
 
     }
 
-    @PostMapping(value = ["suspend-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @CrossOrigin(origins = ["http://localhost:4200"])
+    @PostMapping(value = ["suspend"], headers = ["Content-Type=application/json"])
     fun suspendPendingEHR (request: HttpServletRequest): ResponseEntity<String> {
-        val targetD = request.getParameter("target-doctor")
+        val targetD = request.getParameter("targetD")
                 ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
 
         val targetDX500Name = CordaX500Name.parse(targetD)
         val targetDParty = proxy.wellKnownPartyFromX500Name(targetDX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
 
-        val ehrId = request.getParameter("ehr-id")
+        val ehrId = request.getParameter("ehrId")
         val ehrState = UniqueIdentifier.fromString(ehrId)
         return try {
             val signedTx = proxy.startTrackedFlow(::SuspendEHRFlow, targetDParty, ehrState).returnValue.getOrThrow()
@@ -315,16 +317,17 @@ class Controller(rpc: NodeRPCConnection) {
         }
     }
 
-    @PostMapping(value = ["delete-ehr"], produces = [MediaType.APPLICATION_JSON_VALUE], headers = ["Content-Type=application/x-www-form-urlencoded"])
+    @CrossOrigin(origins = ["http://localhost:4200"])
+    @PostMapping(value = ["delete"], headers = ["Content-Type=application/json"])
     fun deletePendingEHR (request: HttpServletRequest): ResponseEntity<String> {
 
-        val targetD = request.getParameter("counter-party")
+        val targetD = request.getParameter("counterParty")
                 ?: return ResponseEntity.badRequest().body("Query parameter 'targetD' must not be null.\n")
 
         val counterPartyX500Name = CordaX500Name.parse(targetD)
         val counterParty = proxy.wellKnownPartyFromX500Name(counterPartyX500Name) ?: return ResponseEntity.badRequest().body("Party named $targetD cannot be found.\n")
 
-        val ehrId = request.getParameter("ehr-id")
+        val ehrId = request.getParameter("ehrId")
         val ehrState = UniqueIdentifier.fromString(ehrId)
         return try {
             val signedTx = proxy.startTrackedFlow(::DeleteShareEHRAgreementFlow, counterParty, ehrState).returnValue.getOrThrow()

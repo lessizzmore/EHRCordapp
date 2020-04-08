@@ -1,0 +1,12 @@
+<div class="container">
+    <br>
+    <br>
+    <form [formGroup]="oaForm">
+      <div class="form-group">
+        <label for="id">Id</label>
+        <input autofocus style="width: 500px;" type="text" class="form-control" id="id" formControlName="id">
+      </div>
+      <button type="button" class="btn btn-danger" (click)=onDelete()>Delete</button>
+      <button type="button" class="btn btn-primary" (click)=onShare()>Share</button>
+    </form>
+</div>

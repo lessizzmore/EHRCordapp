@@ -5,3 +5,12 @@
     height: 80px;
     width: 150px;
 }
+
+.stretch-tabs ul {
+    display: table;
+    width: 100%;
+}
+
+.stretch-tabs li {
+    display: table-cell;
+}

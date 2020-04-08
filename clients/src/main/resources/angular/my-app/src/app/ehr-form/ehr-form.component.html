@@ -1,7 +1,7 @@
 <div class="container">
     <br>
     <br>
-    <form [formGroup]="ehrForm" (ngSubmit)="onSubmit(ehrForm.value)">
+    <form [formGroup]="ehrForm" (ngSubmit)="onSubmit(ehrForm.value)" style="width: 500px;">
       <div class="form-group">
         <label for="patient">patient</label>
         <input type="text" class="form-control" id="patient" formControlName="patient">
@@ -19,7 +19,7 @@
         <input type="text" class="form-control" id="attachmentId" formControlName="attachmentId">
       </div>
 
-      <button type="submit" class="btn btn-success">Submit</button>
+      <button type="submit" class="btn btn-primary">Submit</button>
 
     </form>
 </div>
