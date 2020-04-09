@@ -66,14 +66,14 @@ class Controller(rpc: NodeRPCConnection) {
     private fun isAlive() = "Up and running!"
 
 
-    @PostMapping(value = ["/create-account"], produces = arrayOf("text/plain"))
+    @PostMapping(value = ["/create-account"])
     private fun createNewAccount(@RequestParam accountName:String): String {
         val result = proxy.startFlowDynamic(CreateNewAccount::class.java, accountName).returnValue.get()
         return result
     }
 
 
-    @PostMapping(value = ["/share-account"], produces = arrayOf("text/plain"))
+    @PostMapping(value = ["/share-account"])
     private fun shareAccount(
             @RequestParam accountName:String, @RequestParam shareTo: String): String {
         val sharedTo = proxy.partiesFromName(shareTo, false).singleOrNull()

@@ -1,20 +1,25 @@
 package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3.corda.lib.accounts.contracts.states.AccountInfo
+import com.r3.corda.lib.accounts.workflows.accountService
+import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
-import net.corda.core.identity.Party
+import net.corda.core.internal.notary.isConsumedByTheSameTx
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import java.lang.IllegalArgumentException
+import java.util.concurrent.atomic.AtomicReference
 
 
 /**
@@ -24,12 +29,19 @@ import net.corda.core.transactions.TransactionBuilder
 @StartableByRPC
 @InitiatingFlow
 class ActivateEHRFlow(
-        val targetDoctor: Party,
+        val sendFromDoctor: String,
+        val sendToDoctor: String,
         val ehrId: UniqueIdentifier
-) : FlowLogic<SignedTransaction>() {
+) : FlowLogic<String>() {
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): String {
+        // create a key for tx
+        val myAccount = accountService.accountInfo(sendFromDoctor).single().state.data
+        val myKey = subFlow(NewKeyForAccount(myAccount.identifier.id)).owningKey
+        val targetAccount = accountService.accountInfo(sendToDoctor).single().state.data
+        val targetAcctAnonymousParty = subFlow(RequestKeyForAccount(targetAccount))
+
 
         // get input state
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
@@ -38,12 +50,10 @@ class ActivateEHRFlow(
                 Vault.StateStatus.UNCONSUMED, null)
         val ehrStateRefToActivate = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
 
-//        // Ensure we are the patient.
-//        check(ehrStateRefToActivate.state.data.patient != ourIdentity) {
-//            throw FlowException("Activate EHRShareAgreementState flow Party must be initiated by patient.")
-//        }
 
-        val activateCommand = Command(EHRShareAgreementContract.Commands.Activate(), listOf(ourIdentity, targetDoctor).map { it.owningKey })
+        val activateCommand = Command(
+                EHRShareAgreementContract.Commands.Activate(),
+                listOf(ourIdentity, targetAcctAnonymousParty).map { it.owningKey })
 
         // Create activation tx
         val notary = serviceHub.networkMapCache.notaryIdentities.first() //TODO
@@ -52,38 +62,62 @@ class ActivateEHRFlow(
                 .addOutputState(ehrStateRefToActivate.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
                 .addCommand(activateCommand)
 
+        // sign tx locally
+        val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey))
 
+        val sessionForAccountToSentTo = initiateFlow(targetAccount.host)
+        val accountToMoveToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAccountToSentTo, targetAcctAnonymousParty.owningKey))
+        val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToMoveToSignature)
 
-        // Verify and sign the tx
-        builder.verify(serviceHub)
-        val ptx = serviceHub.signInitialTransaction(builder)
+        // finalize
+        val fullySignedTx =  subFlow(FinalityFlow(
+                signedByCounterParty,
+                listOf(sessionForAccountToSentTo)
+                        .filter { it.counterparty != ourIdentity }))
 
+        return "send activated EHR to " + targetAccount.host.name.organisation + "'s "+ targetAccount.name
 
-        // Sends selfSignedTx to origin doctor
-        val targetSession = initiateFlow(targetDoctor)
-        val stx = subFlow(CollectSignaturesFlow(ptx, listOf(targetSession)))
-
-
-        // collect signature from originDoctor and finalize the tx
-        return subFlow(FinalityFlow(stx, listOf(targetSession)))
     }
 }
 
 @InitiatedBy(ActivateEHRFlow::class)
-class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<SignedTransaction>() {
+class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<Unit>() {
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call() {
+        val accountTransferredTo = AtomicReference<AccountInfo>()
+        val transactionSigner = object : SignTransactionFlow(otherSession) {
+            override fun checkTransaction(stx: SignedTransaction) {
+                val keyStateTransferredTo = stx
+                        .coreTransaction
+                        .outRefsOfType(EHRShareAgreementState::class.java)
+                        .first().state.data.targetDoctor.owningKey
+                keyStateTransferredTo?.let {
+                    accountTransferredTo.set(accountService.accountInfo(keyStateTransferredTo)?.state?.data)
+                }
 
-        val signTransactionFlow = object : SignTransactionFlow(otherSession) {
-            override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                val ehrShareAgreementState =
-                        stx.coreTransaction.outputStates.single() as EHRShareAgreementState
-                check(ehrShareAgreementState.originDoctor == ourIdentity) { "Activated EHRShareAgreement sent to the wrong person"}
+                if(accountTransferredTo.get() == null) {
+                    throw IllegalArgumentException("Account to transferred to was not found on this node")
+                }
             }
         }
 
-        val stx = subFlow(signTransactionFlow)
-        return subFlow(ReceiveFinalityFlow(otherSession, expectedTxId = stx.id))
+        val transaction = subFlow(transactionSigner)
+        if(otherSession.counterparty != serviceHub.myInfo.legalIdentities.first()) {
+            val receivedTx = subFlow(
+                    ReceiveFinalityFlow(
+                            otherSession,
+                            expectedTxId = transaction.id,
+                            statesToRecord = StatesToRecord.ALL_VISIBLE
+                    )
+            )
+
+            //TODO broadcast to receivers
+//            val accountInfo = accountTransferredTo.get()
+//            if (accountInfo != null) {
+//                subFlow()
+//            }
+        }
+
     }
 }
