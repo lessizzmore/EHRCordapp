@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference
 @StartableByRPC
 @InitiatingFlow
 class ActivateEHRFlow(
-        val sendFromDoctor: String,
+        val sendFromPatient: String,
         val sendToDoctor: String,
         val ehrId: UniqueIdentifier
 ) : FlowLogic<String>() {
@@ -37,7 +37,7 @@ class ActivateEHRFlow(
     @Suspendable
     override fun call(): String {
         // create a key for tx
-        val myAccount = accountService.accountInfo(sendFromDoctor).single().state.data
+        val myAccount = accountService.accountInfo(sendFromPatient).single().state.data
         val myKey = subFlow(NewKeyForAccount(myAccount.identifier.id)).owningKey
         val targetAccount = accountService.accountInfo(sendToDoctor).single().state.data
         val targetAcctAnonymousParty = subFlow(RequestKeyForAccount(targetAccount))
