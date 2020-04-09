@@ -73,7 +73,7 @@ class Controller(rpc: NodeRPCConnection) {
     }
 
 
-    @PostMapping(value = ["/ShareAccounts"], produces = arrayOf("text/plain"))
+    @PostMapping(value = ["/share-account"], produces = arrayOf("text/plain"))
     private fun shareAccount(
             @RequestParam accountName:String, @RequestParam shareTo: String): String {
         val sharedTo = proxy.partiesFromName(shareTo, false).singleOrNull()
