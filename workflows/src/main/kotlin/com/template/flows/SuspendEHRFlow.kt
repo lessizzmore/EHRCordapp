@@ -54,7 +54,7 @@ open class SuspendEHRFlow(
 
         val command = Command(
                 EHRShareAgreementContract.Commands.Suspend(),
-                listOf(ourIdentity, targetAcctAnonymousParty).map { it.owningKey })
+                listOf(myKey, targetAcctAnonymousParty.owningKey))
 
         // Create activation tx
         val notary = serviceHub.networkMapCache.notaryIdentities.first() //TODO
@@ -82,7 +82,7 @@ open class SuspendEHRFlow(
 }
 
 @InitiatedBy(SuspendEHRFlow::class)
-class SuspendEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<SignedTransaction>() {
+class SuspendEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {

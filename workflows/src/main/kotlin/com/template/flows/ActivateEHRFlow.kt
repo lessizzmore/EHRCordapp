@@ -53,7 +53,7 @@ class ActivateEHRFlow(
 
         val activateCommand = Command(
                 EHRShareAgreementContract.Commands.Activate(),
-                listOf(ourIdentity, targetAcctAnonymousParty).map { it.owningKey })
+                listOf(myKey, targetAcctAnonymousParty.owningKey))
 
         // Create activation tx
         val notary = serviceHub.networkMapCache.notaryIdentities.first() //TODO
