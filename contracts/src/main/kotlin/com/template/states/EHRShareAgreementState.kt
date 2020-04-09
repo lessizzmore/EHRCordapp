@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.template.contracts.EHRShareAgreementContract
 import com.template.schemas.EhrShareAgreementSchemaV1
 import net.corda.core.contracts.*
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -15,9 +16,9 @@ import net.corda.core.contracts.LinearState as LinearState
 
 // target doctor is an observer
 @BelongsToContract(EHRShareAgreementContract::class)
-data class EHRShareAgreementState(val patient: Party,
-                                  val originDoctor: Party,
-                                  val targetDoctor: Party,
+data class EHRShareAgreementState(val patient: AnonymousParty,
+                                  val originDoctor: AnonymousParty,
+                                  val targetDoctor: AnonymousParty,
                                   val note: String? = "",
                                   val attachmentId: String? = "",
                                   val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,
@@ -28,9 +29,9 @@ data class EHRShareAgreementState(val patient: Party,
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
      *  lender or the borrower.
      */
-    override val participants: List<Party> get() = listOfNotNull(originDoctor, patient)
-    fun getPatientParty(): Party { return patient }
-    fun getOriginDoctorParty() : Party {return originDoctor}
+    override val participants: List<AnonymousParty> get() = listOfNotNull(originDoctor, patient)
+    fun getPatientParty(): AnonymousParty { return patient }
+    fun getOriginDoctorParty() : AnonymousParty {return originDoctor}
     override fun supportedSchemas(): Iterable<MappedSchema> = listOf(EhrShareAgreementSchemaV1)
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         if (!(schema is EhrShareAgreementSchemaV1)) throw Exception()

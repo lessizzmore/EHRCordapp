@@ -1,6 +1,7 @@
 package com.template.schemas
 
 import com.template.states.EHRShareAgreementStateStatus
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -19,13 +20,13 @@ object EhrShareAgreementSchemaV1 : MappedSchema(
     @Table(name = "ehr_share_agreement_states")
     class PersistentEhrShareAgreementState(
             @Column(name = "patient")
-            var patient: Party,
+            var patient: AnonymousParty,
 
             @Column(name = "originDoctor")
-            var originDoctor: Party,
+            var originDoctor: AnonymousParty,
 
             @Column(name = "targetDoctor")
-            var targetDoctor: Party,
+            var targetDoctor: AnonymousParty,
 
             @Column(name = "note")
             var note: String?,

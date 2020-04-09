@@ -66,11 +66,21 @@ class Controller(rpc: NodeRPCConnection) {
     private fun isAlive() = "Up and running!"
 
 
-//    @RequestMapping("/load-members/", method = [RequestMethod.GET])
-//    fun loadPLayers(): List<Participant> {
-//        return createParticipantsForTournament()
-//    }
+    @PostMapping(value = ["/create-account"], produces = arrayOf("text/plain"))
+    private fun createNewAccount(@RequestParam accountName:String): String {
+        val result = proxy.startFlowDynamic(CreateNewAccount::class.java, accountName).returnValue.get()
+        return result
+    }
 
+
+    @PostMapping(value = ["/ShareAccounts"], produces = arrayOf("text/plain"))
+    private fun shareAccount(
+            @RequestParam accountName:String, @RequestParam shareTo: String): String {
+        val sharedTo = proxy.partiesFromName(shareTo, false).singleOrNull()
+                ?:throw  IllegalArgumentException("No exact match found for Party name ${shareTo}.")
+        val result = proxy.startFlowDynamic(ShareAccount::class.java, accountName, sharedTo).returnValue.get()
+        return result
+    }
 
     @PostMapping
     fun upload(@RequestParam file: MultipartFile, @RequestParam uploader: String): ResponseEntity<String> {
