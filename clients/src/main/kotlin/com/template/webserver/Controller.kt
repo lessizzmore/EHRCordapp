@@ -14,6 +14,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.*
 import net.corda.core.utilities.getOrThrow
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.properties.bind.Bindable.mapOf
 import org.springframework.core.io.InputStreamResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
@@ -63,6 +64,12 @@ class Controller(rpc: NodeRPCConnection) {
 
     @GetMapping(value = ["status"])
     private fun isAlive() = "Up and running!"
+
+
+//    @RequestMapping("/load-members/", method = [RequestMethod.GET])
+//    fun loadPLayers(): List<Participant> {
+//        return createParticipantsForTournament()
+//    }
 
 
     @PostMapping
