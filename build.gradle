@@ -20,6 +20,11 @@ buildscript {
         //springboot
         spring_boot_version = '2.0.2.RELEASE'
         spring_boot_gradle_plugin_version = '2.0.2.RELEASE'
+
+        tokens_release_group = 'com.r3.corda.lib.tokens'
+        tokens_release_version = '1.1'
+        accounts_release_group = 'com.r3.corda.lib.accounts'
+        accounts_release_version = '1.0'
     }
 
     repositories {
@@ -49,6 +54,12 @@ allprojects {
         mavenCentral()
         maven { url 'https://software.r3.com/artifactory/corda' }
         maven { url 'https://jitpack.io' }
+        maven { url "https://repo.gradle.org/gradle/libs-releases-local" }
+        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda' }
+        // Can be removed post-release - used to get nightly snapshot build.
+        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-lib' }
+        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-lib-dev' }
+
     }
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
@@ -94,6 +105,11 @@ dependencies {
     cordaCompile "org.slf4j:jul-to-slf4j:$slf4j_version"
     cordaCompile "com.fasterxml.jackson.module:jackson-module-kotlin:2.10.1"
     cordaCompile "net.corda:corda-jackson:$corda_release_version"
+
+    // Token SDK dependencies.
+    cordapp "$tokens_release_group:tokens-contracts:$tokens_release_version"
+    cordapp "$tokens_release_group:tokens-workflows:$tokens_release_version"
+    cordapp "$tokens_release_group:tokens-money:$tokens_release_version"
 }
 
 cordapp {
