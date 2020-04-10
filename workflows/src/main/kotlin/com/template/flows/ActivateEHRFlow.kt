@@ -11,6 +11,7 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
+import net.corda.core.identity.Party
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
@@ -18,6 +19,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ProgressTracker
 import java.lang.IllegalArgumentException
 import java.util.concurrent.atomic.AtomicReference
 
@@ -29,21 +31,48 @@ import java.util.concurrent.atomic.AtomicReference
 @StartableByRPC
 @InitiatingFlow
 class ActivateEHRFlow(
-        val sendFromPatient: String,
-        val sendToDoctor: String,
+        val whereTo: String,
         val ehrId: UniqueIdentifier
-) : FlowLogic<String>() {
+) : FlowLogic<SignedTransaction>() {
+
+    companion object {
+        object GENERATING_KEYS : ProgressTracker.Step("Generating Keys for transactions.")
+        object GET_STATE : ProgressTracker.Step("Retrieving state.")
+        object GENERATING_TRANSACTION : ProgressTracker.Step("Generating tx.")
+        object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
+        object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
+        object GATHERING_SIGS : ProgressTracker.Step("Gathering the counterparty's signature.") {
+            override fun childProgressTracker() = CollectSignaturesFlow.tracker()
+        }
+
+        object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
+            override fun childProgressTracker() = FinalityFlow.tracker()
+        }
+
+        fun tracker() = ProgressTracker(
+                GENERATING_KEYS,
+                GET_STATE,
+                GENERATING_TRANSACTION,
+                VERIFYING_TRANSACTION,
+                SIGNING_TRANSACTION,
+                GATHERING_SIGS,
+                FINALISING_TRANSACTION
+        )
+    }
+
+    override val progressTracker = tracker()
+
 
     @Suspendable
-    override fun call(): String {
+    override fun call(): SignedTransaction {
         // create a key for tx
-        val myAccount = accountService.accountInfo(sendFromPatient).single().state.data
-        val myKey = subFlow(NewKeyForAccount(myAccount.identifier.id)).owningKey
-        val targetAccount = accountService.accountInfo(sendToDoctor).single().state.data
+        progressTracker.currentStep = GENERATING_KEYS
+        val targetAccount = accountService.accountInfo(whereTo).single().state.data
         val targetAcctAnonymousParty = subFlow(RequestKeyForAccount(targetAccount))
 
 
         // get input state
+        progressTracker.currentStep = GET_STATE
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
                 null,
                 listOf(ehrId),
@@ -53,29 +82,33 @@ class ActivateEHRFlow(
 
         val activateCommand = Command(
                 EHRShareAgreementContract.Commands.Activate(),
-                listOf(myKey, targetAcctAnonymousParty.owningKey))
+                listOf(ourIdentity.owningKey, targetAcctAnonymousParty.owningKey))
 
         // Create activation tx
-        val notary = serviceHub.networkMapCache.notaryIdentities.first() //TODO
+        val notary = serviceHub.networkMapCache.notaryIdentities.first()
+        progressTracker.currentStep = GENERATING_TRANSACTION
         val builder = TransactionBuilder(notary)
                 .addInputState(ehrStateRefToActivate)
                 .addOutputState(ehrStateRefToActivate.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
                 .addCommand(activateCommand)
 
         // sign tx locally
+        progressTracker.currentStep = SIGNING_TRANSACTION
         val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey))
 
+        progressTracker.currentStep =GATHERING_SIGS
         val sessionForAccountToSentTo = initiateFlow(targetAccount.host)
         val accountToMoveToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAccountToSentTo, targetAcctAnonymousParty.owningKey))
         val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToMoveToSignature)
 
         // finalize
+        progressTracker.currentStep =FINALISING_TRANSACTION
         val fullySignedTx =  subFlow(FinalityFlow(
                 signedByCounterParty,
                 listOf(sessionForAccountToSentTo)
                         .filter { it.counterparty != ourIdentity }))
 
-        return "send activated EHR to " + targetAccount.host.name.organisation + "'s "+ targetAccount.name
+        return fullySignedTx
 
     }
 }
@@ -91,7 +124,7 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
                 val keyStateTransferredTo = stx
                         .coreTransaction
                         .outRefsOfType(EHRShareAgreementState::class.java)
-                        .first().state.data.targetDoctor.owningKey
+                        .first().state.data.originDoctor.owningKey
                 keyStateTransferredTo?.let {
                     accountTransferredTo.set(accountService.accountInfo(keyStateTransferredTo)?.state?.data)
                 }
@@ -111,12 +144,6 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
                             statesToRecord = StatesToRecord.ALL_VISIBLE
                     )
             )
-
-            //TODO broadcast to receivers
-//            val accountInfo = accountTransferredTo.get()
-//            if (accountInfo != null) {
-//                subFlow()
-//            }
         }
 
     }

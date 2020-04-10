@@ -21,9 +21,9 @@ import java.util.concurrent.atomic.AtomicReference
 @InitiatingFlow
 @StartableByRPC
 class RequestShareEHRAgreementFlow(
-        val sendFromDoctor: String,
-        val sendToPatient: String,
-        val targetDoctor: String,
+        val whoIam: String,
+        val whereTo: String,
+        val aboutWho: Party,
         val note: String? = "",
         val attachmentId: String? = ""
 ): FlowLogic<String>() {
@@ -32,24 +32,20 @@ class RequestShareEHRAgreementFlow(
     override fun call(): String {
 
         // generate key for tx
-        // patient
-        val myAccount = accountService.accountInfo(sendFromDoctor).single().state.data
+        // doctor
+        val myAccount = accountService.accountInfo(whoIam).single().state.data
         val myKey = subFlow(NewKeyForAccount(myAccount.identifier.id)).owningKey
 
-        // origin doctor
-        val targetAccount = accountService.accountInfo(sendToPatient).single().state.data
-        val targetAcctAnonymousParty = subFlow(RequestKeyForAccount(targetAccount))
-
         // target doctor
-        val targetDAccount = accountService.accountInfo(targetDoctor).single().state.data
+        val targetDAccount = accountService.accountInfo(whereTo).single().state.data
         val targetDAcctAnonymousParty = subFlow(RequestKeyForAccount(targetDAccount))
 
-        val notary = serviceHub.networkMapCache.notaryIdentities.first() //TODO code into config instead of getting the first()
-        val createCommand = Command(EHRShareAgreementContract.Commands.Create(), listOf(myKey, targetAcctAnonymousParty.owningKey))
+        val notary = serviceHub.networkMapCache.notaryIdentities.first()
+        val createCommand = Command(EHRShareAgreementContract.Commands.Create(), listOf(myKey, aboutWho.owningKey))
 
 
         // create state to transfer
-        val initialEHRShareAgreementState = EHRShareAgreementState(targetAcctAnonymousParty, AnonymousParty(myKey), targetDAcctAnonymousParty, note, attachmentId)
+        val initialEHRShareAgreementState = EHRShareAgreementState(AnonymousParty(myKey), targetDAcctAnonymousParty, aboutWho, note, attachmentId)
 
 
         // create tx, state + command
@@ -61,14 +57,14 @@ class RequestShareEHRAgreementFlow(
         val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey, myKey))
 
         // collect signatures
-        val sessionForAcctToSendTo = initiateFlow(targetAccount.host)
-        val accountToSendToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAcctToSendTo, targetAcctAnonymousParty.owningKey))
+        val sessionForAcctToSendTo = initiateFlow(aboutWho)
+        val accountToSendToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAcctToSendTo, aboutWho.owningKey))
         val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToSendToSignature)
 
         // finalize
         val fullySignedTx =  subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAcctToSendTo).filter { it.counterparty != ourIdentity }))
 
-        return "EHR state send to " + targetAccount.host.name.organisation + "'s " + targetAccount.name
+        return whoIam + " wants to share "+ aboutWho.name +"'s record to " + targetDAccount.host.name.organisation + "'s "+ targetDAccount.name
     }
 }
 
@@ -85,17 +81,6 @@ class RequestShareEHRAgreementFlowResponder (
         val accountTransferredTo = AtomicReference<AccountInfo>()
         val transactionSigner = object : SignTransactionFlow(otherSession) {
             override fun checkTransaction(stx: SignedTransaction) {
-                val keyStateTransferredTo = stx
-                        .coreTransaction
-                        .outRefsOfType(EHRShareAgreementState::class.java)
-                        .first().state.data.targetDoctor.owningKey
-                keyStateTransferredTo?.let {
-                    accountTransferredTo.set(accountService.accountInfo(keyStateTransferredTo)?.state?.data)
-                }
-
-                if(accountTransferredTo.get() == null) {
-                    throw IllegalArgumentException("Account to transferred to was not found on this node")
-                }
             }
         }
 
@@ -108,12 +93,6 @@ class RequestShareEHRAgreementFlowResponder (
                             statesToRecord = StatesToRecord.ALL_VISIBLE
                     )
             )
-
-            //TODO broadcast to receivers
-//            val accountInfo = accountTransferredTo.get()
-//            if (accountInfo != null) {
-//                subFlow()
-//            }
         }
 
     }
