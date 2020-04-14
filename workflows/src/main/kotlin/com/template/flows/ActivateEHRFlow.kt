@@ -118,20 +118,20 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
 
     @Suspendable
     override fun call() {
-        val accountTransferredTo = AtomicReference<AccountInfo>()
+//        val accountTransferredTo = AtomicReference<AccountInfo>()
         val transactionSigner = object : SignTransactionFlow(otherSession) {
             override fun checkTransaction(stx: SignedTransaction) {
-                val keyStateTransferredTo = stx
-                        .coreTransaction
-                        .outRefsOfType(EHRShareAgreementState::class.java)
-                        .first().state.data.originDoctor.owningKey
-                keyStateTransferredTo?.let {
-                    accountTransferredTo.set(accountService.accountInfo(keyStateTransferredTo)?.state?.data)
-                }
-
-                if(accountTransferredTo.get() == null) {
-                    throw IllegalArgumentException("Account to transferred to was not found on this node")
-                }
+//                val keyStateTransferredTo = stx
+//                        .coreTransaction
+//                        .outRefsOfType(EHRShareAgreementState::class.java)
+//                        .first().state.data.originDoctor.owningKey
+//                keyStateTransferredTo?.let {
+//                    accountTransferredTo.set(accountService.accountInfo(keyStateTransferredTo)?.state?.data)
+//                }
+//
+//                if(accountTransferredTo.get() == null) {
+//                    throw IllegalArgumentException("Account to transferred to was not found on this node")
+//                }
             }
         }
 
