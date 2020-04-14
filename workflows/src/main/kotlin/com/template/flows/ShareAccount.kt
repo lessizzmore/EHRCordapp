@@ -22,13 +22,12 @@ class ShareAccount(
     override fun call(): String {
 
         val allMyAccounts = accountService.ourAccounts()
-//        val sharedAccount = allMyAccounts.single { it.state.data.name == acctNameShared }.state.data.identifier.id
-        val sharedAccountStateAndRef = allMyAccounts.single { it.state.data.name == acctNameShared }
+        val sharedAccount = allMyAccounts.single { it.state.data.name == acctNameShared }.state.data.identifier.id
 
-//        accountService.shareAccountInfoWithParty(sharedAccount,shareTo)
-        subFlow(ShareAccountInfo(sharedAccountStateAndRef, listOf(shareTo)))
+        accountService.shareAccountInfoWithParty(sharedAccount,shareTo)
 
-        return "Shared " + sharedAccountStateAndRef.state.data.name + sharedAccountStateAndRef.state.data.identifier
+        return "Shared " + acctNameShared + " with " + shareTo.name.organisation
+
     }
 }
 
