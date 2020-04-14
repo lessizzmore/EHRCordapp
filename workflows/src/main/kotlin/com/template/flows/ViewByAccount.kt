@@ -6,6 +6,7 @@ import com.template.states.EHRShareAgreementState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 
 
@@ -18,6 +19,7 @@ class ViewByAccount(
     override fun call(): List<EHRShareAgreementState> {
         val myAccount = accountService.accountInfo(acctname).single().state.data
         val criteria = QueryCriteria.VaultQueryCriteria(
+                status = Vault.StateStatus.UNCONSUMED,
                 externalIds = listOf(myAccount.identifier.id)
         )
         val states = serviceHub.vaultService.queryBy(

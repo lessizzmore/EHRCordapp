@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.accounts.contracts.states.AccountInfo
 import com.r3.corda.lib.accounts.workflows.accountService
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount
+import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts
+import com.r3.corda.lib.accounts.workflows.internal.flows.createKeyForAccount
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
@@ -11,6 +13,7 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.node.StatesToRecord
@@ -20,7 +23,10 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import java.lang.IllegalArgumentException
+import java.security.PublicKey
+import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
 
@@ -31,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference
 @StartableByRPC
 @InitiatingFlow
 class ActivateEHRFlow(
+        val whoIam: String,
         val whereTo: String,
         val ehrId: UniqueIdentifier
 ) : FlowLogic<SignedTransaction>() {
@@ -67,9 +74,16 @@ class ActivateEHRFlow(
     override fun call(): SignedTransaction {
         // create a key for tx
         progressTracker.currentStep = GENERATING_KEYS
-        val targetAccount = accountService.accountInfo(whereTo).single().state.data
-        val targetAcctAnonymousParty = subFlow(RequestKeyForAccount(targetAccount))
 
+        // patient
+        val myAccountStateAndRef = accountService.accountInfo(whoIam).single()
+        if(myAccountStateAndRef == null) throw FlowException("$whoIam account not found")
+        val myAccountKey = serviceHub.createKeyForAccount(myAccountStateAndRef.state.data).owningKey
+
+        // doctor 1
+        val targetDAccountStateAndRef = accountService.accountInfo(whereTo).single()
+        if(targetDAccountStateAndRef == null) throw FlowException("$whereTo account not found")
+        val targetDAnonParty =  subFlow(RequestKeyForAccount(targetDAccountStateAndRef.state.data))
 
         // get input state
         progressTracker.currentStep = GET_STATE
@@ -79,10 +93,12 @@ class ActivateEHRFlow(
                 Vault.StateStatus.UNCONSUMED, null)
         val ehrStateRefToActivate = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
 
+        subFlow(ShareStateAndSyncAccounts(ehrStateRefToActivate, myAccountStateAndRef.state.data.host))
+        subFlow(ShareStateAndSyncAccounts(ehrStateRefToActivate, targetDAccountStateAndRef.state.data.host))
 
         val activateCommand = Command(
                 EHRShareAgreementContract.Commands.Activate(),
-                listOf(ourIdentity.owningKey, targetAcctAnonymousParty.owningKey))
+                listOf(ourIdentity.owningKey, targetDAnonParty.owningKey))
 
         // Create activation tx
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
@@ -91,25 +107,22 @@ class ActivateEHRFlow(
                 .addInputState(ehrStateRefToActivate)
                 .addOutputState(ehrStateRefToActivate.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
                 .addCommand(activateCommand)
+        builder.verify(serviceHub)
+
 
         // sign tx locally
         progressTracker.currentStep = SIGNING_TRANSACTION
-        val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey))
+        val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey, myAccountKey))
 
         progressTracker.currentStep =GATHERING_SIGS
-        val sessionForAccountToSentTo = initiateFlow(targetAccount.host)
-        val accountToMoveToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAccountToSentTo, targetAcctAnonymousParty.owningKey))
+        val sessionForAccountToSentTo = initiateFlow(targetDAnonParty)
+        val accountToMoveToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAccountToSentTo, targetDAnonParty.owningKey))
         val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToMoveToSignature)
 
         // finalize
         progressTracker.currentStep =FINALISING_TRANSACTION
-        val fullySignedTx =  subFlow(FinalityFlow(
-                signedByCounterParty,
-                listOf(sessionForAccountToSentTo)
-                        .filter { it.counterparty != ourIdentity }))
-
+        val fullySignedTx =  subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
         return fullySignedTx
-
     }
 }
 
@@ -118,20 +131,9 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
 
     @Suspendable
     override fun call() {
-//        val accountTransferredTo = AtomicReference<AccountInfo>()
+
         val transactionSigner = object : SignTransactionFlow(otherSession) {
             override fun checkTransaction(stx: SignedTransaction) {
-//                val keyStateTransferredTo = stx
-//                        .coreTransaction
-//                        .outRefsOfType(EHRShareAgreementState::class.java)
-//                        .first().state.data.originDoctor.owningKey
-//                keyStateTransferredTo?.let {
-//                    accountTransferredTo.set(accountService.accountInfo(keyStateTransferredTo)?.state?.data)
-//                }
-//
-//                if(accountTransferredTo.get() == null) {
-//                    throw IllegalArgumentException("Account to transferred to was not found on this node")
-//                }
             }
         }
 

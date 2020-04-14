@@ -91,44 +91,44 @@ class Controller(rpc: NodeRPCConnection) {
         return result
     }
 
-    @CrossOrigin(origins = ["http://localhost:4200"])
-    @RequestMapping(value = ["share-with-account-request"])
-    fun sendEHRShareRequest (request: HttpServletRequest): ResponseEntity<String> {
-
-        val doctorA = request.getParameter("whoIam")
-        val doctorB = request.getParameter("whereTo")
-        val patient = request.getParameter("aboutWho")
-        val note = request.getParameter("note")
-        val attachmentId = request.getParameter("attachmentId")
-
-
-        if(patient == null){
-            return ResponseEntity.badRequest().body("Query parameter 'aboutWho' must not be null.\n")
-        }
-        if(doctorA == null){
-            return ResponseEntity.badRequest().body("Query parameter 'whoIam' must not be null.\n")
-        }
-
-        if(doctorB == null){
-            return ResponseEntity.badRequest().body("Query parameter 'whereTo' must not be null.\n")
-        }
-
-
-        val patientX500Name = CordaX500Name.parse(patient)
-        val patientParty = proxy.wellKnownPartyFromX500Name(patientX500Name) ?: return ResponseEntity.badRequest().body("Party named $patient cannot be found.\n")
-
-        return try {
-            val signedTx = proxy.startTrackedFlow(::RequestShareEHRAgreementFlow, doctorA, doctorB, patientParty, note, attachmentId).returnValue.getOrThrow()
-            ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(signedTx)
-
-        } catch (ex: Throwable) {
-            logger.error(ex.message, ex)
-            ResponseEntity.badRequest().body(ex.message!!)
-        }
-
-    }
+//    @CrossOrigin(origins = ["http://localhost:4200"])
+//    @RequestMapping(value = ["share-with-account-request"])
+//    fun sendEHRShareRequest (request: HttpServletRequest): ResponseEntity<String> {
+//
+//        val doctorA = request.getParameter("whoIam")
+//        val doctorB = request.getParameter("whereTo")
+//        val patient = request.getParameter("aboutWho")
+//        val note = request.getParameter("note")
+//        val attachmentId = request.getParameter("attachmentId")
+//
+//
+//        if(patient == null){
+//            return ResponseEntity.badRequest().body("Query parameter 'aboutWho' must not be null.\n")
+//        }
+//        if(doctorA == null){
+//            return ResponseEntity.badRequest().body("Query parameter 'whoIam' must not be null.\n")
+//        }
+//
+//        if(doctorB == null){
+//            return ResponseEntity.badRequest().body("Query parameter 'whereTo' must not be null.\n")
+//        }
+//
+//
+//        val patientX500Name = CordaX500Name.parse(patient)
+//        val patientParty = proxy.wellKnownPartyFromX500Name(patientX500Name) ?: return ResponseEntity.badRequest().body("Party named $patient cannot be found.\n")
+//
+//        return try {
+//            val signedTx = proxy.startTrackedFlow(::RequestShareEHRAgreementFlow, doctorA, doctorB, patientParty, note, attachmentId).returnValue.getOrThrow()
+//            ResponseEntity
+//                    .status(HttpStatus.OK)
+//                    .body(signedTx)
+//
+//        } catch (ex: Throwable) {
+//            logger.error(ex.message, ex)
+//            ResponseEntity.badRequest().body(ex.message!!)
+//        }
+//
+//    }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
     @PostMapping(value = ["/view-account/{acctName}"])
@@ -319,14 +319,16 @@ class Controller(rpc: NodeRPCConnection) {
     @CrossOrigin(origins = ["http://localhost:4200"])
     @PostMapping(value = ["activate"])
     fun activatePendingEHR (request: HttpServletRequest): ResponseEntity<SignedTransaction>? {
-        val targetD = request.getParameter("whereTo")
+        val whoIam = request.getParameter("whoIam")
+        val whereTo = request.getParameter("whereTo")
 
         val ehrId = request.getParameter("ehrId")
         val ehrState = UniqueIdentifier.fromString(ehrId)
         return try {
             val signedTx = proxy.startTrackedFlow(
                     ::ActivateEHRFlow,
-                    targetD,
+                    whoIam,
+                    whereTo,
                     ehrState).returnValue.getOrThrow()
             ResponseEntity
                     .status(HttpStatus.OK)

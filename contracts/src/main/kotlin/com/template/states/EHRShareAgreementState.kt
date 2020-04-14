@@ -17,7 +17,7 @@ import net.corda.core.contracts.LinearState as LinearState
 data class EHRShareAgreementState(
                                   val originDoctor: AnonymousParty,
                                   val targetDoctor: AnonymousParty,
-                                  val patient: Party,
+                                  val patient: AnonymousParty,
                                   val note: String? = "",
                                   val attachmentId: String? = "",
                                   val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,

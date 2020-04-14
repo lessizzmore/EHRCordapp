@@ -20,7 +20,7 @@ object EhrShareAgreementSchemaV1 : MappedSchema(
     @Table(name = "ehr_share_agreement_states")
     class PersistentEhrShareAgreementState(
             @Column(name = "patient")
-            var patient: Party,
+            var patient: AnonymousParty,
 
             @Column(name = "originDoctor")
             var originDoctor: AnonymousParty,
