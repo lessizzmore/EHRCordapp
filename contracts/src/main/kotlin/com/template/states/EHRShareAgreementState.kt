@@ -59,7 +59,7 @@ data class EHRShareAgreementState(
 enum class EHRShareAgreementStateStatus(s: String) {
     PENDING ("pending"),
     ACTIVE("active"),
-    SUSPENDED("suspended"),
+    REJECTED("rejected"),
     SHARED("shared")
 }
 

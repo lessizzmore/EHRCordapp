@@ -26,7 +26,7 @@ import net.corda.core.utilities.ProgressTracker
  */
 @StartableByRPC
 @InitiatingFlow
-class ActivateEHRFlow(
+class RejectEHRFlow(
         val whoIam: String,
         val whereTo: String,
         val ehrId: UniqueIdentifier
@@ -80,19 +80,19 @@ class ActivateEHRFlow(
                 null,
                 listOf(ehrId),
                 Vault.StateStatus.UNCONSUMED, null)
-        val ehrStateRefToActivate = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+        val ehrStateRefToReject = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
 
-        val activateCommand = Command(
-                EHRShareAgreementContract.Commands.Activate(),
+        val rejectCommand = Command(
+                EHRShareAgreementContract.Commands.Reject(),
                 listOf(ourIdentity.owningKey, targetDAnonParty.owningKey))
 
         // Create activation tx
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         progressTracker.currentStep = GENERATING_TRANSACTION
         val builder = TransactionBuilder(notary)
-                .addInputState(ehrStateRefToActivate)
-                .addOutputState(ehrStateRefToActivate.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
-                .addCommand(activateCommand)
+                .addInputState(ehrStateRefToReject)
+                .addOutputState(ehrStateRefToReject.state.data.copy(status = EHRShareAgreementStateStatus.REJECTED), EHRShareAgreementContract.EHR_CONTRACT_ID)
+                .addCommand(rejectCommand)
         builder.verify(serviceHub)
 
 
@@ -112,8 +112,8 @@ class ActivateEHRFlow(
     }
 }
 
-@InitiatedBy(ActivateEHRFlow::class)
-class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<Unit>() {
+@InitiatedBy(RejectEHRFlow::class)
+class RejectEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
@@ -123,12 +123,12 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
             }
         }
         val transaction = subFlow(transactionSigner)
-            subFlow(
-                    ReceiveFinalityFlow(
-                            otherSession,
-                            expectedTxId = transaction.id,
-                            statesToRecord = StatesToRecord.ALL_VISIBLE
-                    )
-            )
-        }
+        subFlow(
+                ReceiveFinalityFlow(
+                        otherSession,
+                        expectedTxId = transaction.id,
+                        statesToRecord = StatesToRecord.ALL_VISIBLE
+                )
+        )
+    }
 }

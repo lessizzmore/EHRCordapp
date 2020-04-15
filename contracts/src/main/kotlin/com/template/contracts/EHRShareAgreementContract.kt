@@ -14,7 +14,7 @@ class EHRShareAgreementContract : Contract {
 
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
-        class Suspend : TypeOnlyCommandData(), Commands
+        class Reject : TypeOnlyCommandData(), Commands
         class Activate : TypeOnlyCommandData(), Commands
         class Share : TypeOnlyCommandData(), Commands
         class Delete : TypeOnlyCommandData(), Commands
@@ -28,7 +28,7 @@ class EHRShareAgreementContract : Contract {
         when (command.value) {
 
             is Commands.Create -> verifyCreate(tx, setOfSigners)
-            is Commands.Suspend -> verifySuspend(tx, setOfSigners)
+            is Commands.Reject -> verifyReject(tx, setOfSigners)
             is Commands.Activate -> verifyActive(tx, setOfSigners)
             is Commands.Share -> verifyShare(tx, setOfSigners)
             is Commands.Delete -> verifyDelete(tx, setOfSigners)
@@ -47,13 +47,13 @@ class EHRShareAgreementContract : Contract {
 //        "Both participants must sign the tx" using (signers == output.participants.map { it.owningKey })
 }
 
-    private fun verifySuspend(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+    private fun verifyReject(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
         val command = tx.commands.requireSingleCommand<Commands>()
         val output = tx.outputs.single {it.data is EHRShareAgreementState }
         val outputEHR = output.data as EHRShareAgreementState
         val inputEHR = tx.inputsOfType<EHRShareAgreementState>().single()
         //"Both participants should sign a suspension transaction" using (command.signers.toSet() == setOf(outputEHR.participants.map { it.owningKey }.toSet()))
-        "Input state of a suspension transaction shouldn't be already suspended" using (inputEHR.status != EHRShareAgreementStateStatus.SUSPENDED)
+        "Input state of a suspension transaction shouldn't be already suspended" using (inputEHR.status != EHRShareAgreementStateStatus.REJECTED)
         "Output state of a suspension transaction should be suspended" using (outputEHR.status != EHRShareAgreementStateStatus.PENDING)
     }
 
