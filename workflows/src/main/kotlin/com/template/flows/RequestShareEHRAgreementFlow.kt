@@ -74,8 +74,9 @@ class RequestShareEHRAgreementFlow(
         // locally sign tx
         val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey, myAccountKey))
 
-        // collect signatures
+        // collect signaturesy
         val sessionForAcctToSendTo = initiateFlow(patientAcctAnonParty)
+
         val accountToSendToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAcctToSendTo, patientAcctAnonParty.owningKey))
         val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToSendToSignature)
 
@@ -102,14 +103,10 @@ class RequestShareEHRAgreementFlowResponder (
         }
 
         val transaction = subFlow(transactionSigner)
-        if(otherSession.counterparty != serviceHub.myInfo.legalIdentities.first()) {
-            subFlow(
-                    ReceiveFinalityFlow(
+            subFlow(ReceiveFinalityFlow(
                             otherSession,
                             expectedTxId = transaction.id,
                             statesToRecord = StatesToRecord.ALL_VISIBLE
-                    )
-            )
-        }
+                    ))
     }
 }

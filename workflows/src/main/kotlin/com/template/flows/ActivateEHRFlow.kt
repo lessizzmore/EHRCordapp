@@ -72,6 +72,8 @@ class ActivateEHRFlow(
         // doctor 1
         val targetDAccountStateAndRef = accountService.accountInfo(whereTo).single()
         val targetDAnonParty =  subFlow(RequestKeyForAccount(targetDAccountStateAndRef.state.data))
+        print("doctor1 account state and ref :$targetDAccountStateAndRef")
+
 
         // get input state
         progressTracker.currentStep = GET_STATE
@@ -125,7 +127,6 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
             }
         }
         val transaction = subFlow(transactionSigner)
-        if(otherSession.counterparty != serviceHub.myInfo.legalIdentities.first()) {
             subFlow(
                     ReceiveFinalityFlow(
                             otherSession,
@@ -134,6 +135,4 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
                     )
             )
         }
-
-    }
 }
