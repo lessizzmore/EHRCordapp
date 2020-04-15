@@ -3,6 +3,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SendTransactionFlow
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 
@@ -13,7 +14,7 @@ import net.corda.core.transactions.SignedTransaction
 @InitiatingFlow
 class BroadcastTransactionToRecipients(
         val stx: SignedTransaction,
-        val recipients: List<Party>) : FlowLogic<Unit>() {
+        val recipients: List<AnonymousParty>) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {

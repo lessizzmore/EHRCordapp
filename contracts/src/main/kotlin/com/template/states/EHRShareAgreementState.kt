@@ -21,14 +21,16 @@ data class EHRShareAgreementState(
                                   val note: String? = "",
                                   val attachmentId: String? = "",
                                   val status: EHRShareAgreementStateStatus = EHRShareAgreementStateStatus.PENDING,
-                                  override val linearId: UniqueIdentifier = UniqueIdentifier()
+                                  override val linearId: UniqueIdentifier = UniqueIdentifier(),
+                                  override val participants: List<AbstractParty> = listOf(originDoctor, patient)
 ) : LinearState, QueryableState {
 
     /**
      *  This property holds a list of the nodes which can "use" this state in a valid transaction. In this case, the
      *  lender or the borrower.
      */
-    override val participants: List<AbstractParty> get() = listOfNotNull(originDoctor, patient)
+//    override val participants: List<AbstractParty> get() = listOfNotNull(originDoctor, patient)
+
     override fun supportedSchemas(): Iterable<MappedSchema> = listOf(EhrShareAgreementSchemaV1)
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         if (!(schema is EhrShareAgreementSchemaV1)) throw Exception()

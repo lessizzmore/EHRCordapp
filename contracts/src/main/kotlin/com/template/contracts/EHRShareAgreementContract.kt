@@ -71,7 +71,6 @@ class EHRShareAgreementContract : Contract {
         val command = tx.commands.requireSingleCommand<Commands>()
         val output = tx.outputs.single {it.data is EHRShareAgreementState }
         val outputEHR = output.data as EHRShareAgreementState
-        "Patient is a required signer" using (command.signers.contains(outputEHR.patient.owningKey))
         "Only one output state should be created when issuing a EHRAgreementState." using (tx.outputs.size == 1)
     }
 
