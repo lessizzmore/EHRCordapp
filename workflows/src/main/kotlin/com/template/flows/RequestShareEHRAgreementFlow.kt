@@ -36,10 +36,10 @@ class RequestShareEHRAgreementFlow(
         val aboutWho: String,
         val note: String? = "",
         val attachmentId: String? = ""
-): FlowLogic<String>() {
+): FlowLogic<SignedTransaction>() {
 
     @Suspendable
-    override fun call(): String {
+    override fun call(): SignedTransaction {
 
         // generate key for tx
         // doctor1
@@ -80,9 +80,7 @@ class RequestShareEHRAgreementFlow(
         val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToSendToSignature)
 
         // finalize
-        val fullySignedTx =  subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAcctToSendTo).filter { it.counterparty != ourIdentity }))
-
-        return whoIam + " wants to share "+ patientAccount.host.name.organisation + " - "+ patientAccount.name +"'s record to " + targetDAccount.host.name.organisation + "- "+ targetDAccount.name
+        return subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAcctToSendTo).filter { it.counterparty != ourIdentity }))
     }
 }
 
@@ -105,7 +103,7 @@ class RequestShareEHRAgreementFlowResponder (
 
         val transaction = subFlow(transactionSigner)
         if(otherSession.counterparty != serviceHub.myInfo.legalIdentities.first()) {
-            val receivedTx = subFlow(
+            subFlow(
                     ReceiveFinalityFlow(
                             otherSession,
                             expectedTxId = transaction.id,

@@ -14,6 +14,10 @@ class DriverBasedTest {
     val bankA = TestIdentity(CordaX500Name("BankA", "", "GB"))
     val bankB = TestIdentity(CordaX500Name("BankB", "", "US"))
 
+    val HospitalA = TestIdentity(CordaX500Name("HospitalA", "", "GB"))
+    val Patient = TestIdentity(CordaX500Name("Patient", "", "GB"))
+
+
     @Test
     fun `node test`() {
         driver(DriverParameters(isDebug = true, startNodesInProcess = true)) {
@@ -32,6 +36,22 @@ class DriverBasedTest {
             assertEquals(partyBHandle.rpc.wellKnownPartyFromX500Name(bankA.name)!!.name, bankA.name)
         }
     }
+
+    @Test
+    fun `node flow test`() {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true)) {
+            // This starts two nodes simultaneously with startNode, which returns a future that completes when the node
+            // has completed startup. Then these are all resolved with getOrThrow which returns the NodeHandle list.
+            val (partyAHandle, partyBHandle) = listOf(
+                    startNode(providedName = HospitalA.name),
+                    startNode(providedName = Patient.name)
+            ).map { it.getOrThrow() }
+
+
+        }
+    }
+
+
 
     @Test
     fun `node webserver test`() {

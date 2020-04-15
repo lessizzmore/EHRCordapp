@@ -1,7 +1,6 @@
 package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.accounts.contracts.states.AccountInfo
 import com.r3.corda.lib.accounts.workflows.accountService
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount
 import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts
@@ -11,11 +10,7 @@ import com.template.states.EHRShareAgreementState
 import com.template.states.EHRShareAgreementStateStatus
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
-import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
@@ -23,11 +18,6 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.unwrap
-import java.lang.IllegalArgumentException
-import java.security.PublicKey
-import java.util.*
-import java.util.concurrent.atomic.AtomicReference
 
 
 /**
@@ -77,12 +67,10 @@ class ActivateEHRFlow(
 
         // patient
         val myAccountStateAndRef = accountService.accountInfo(whoIam).single()
-        if(myAccountStateAndRef == null) throw FlowException("$whoIam account not found")
         val myAccountKey = serviceHub.createKeyForAccount(myAccountStateAndRef.state.data).owningKey
 
         // doctor 1
         val targetDAccountStateAndRef = accountService.accountInfo(whereTo).single()
-        if(targetDAccountStateAndRef == null) throw FlowException("$whereTo account not found")
         val targetDAnonParty =  subFlow(RequestKeyForAccount(targetDAccountStateAndRef.state.data))
 
         // get input state
@@ -116,13 +104,13 @@ class ActivateEHRFlow(
 
         progressTracker.currentStep =GATHERING_SIGS
         val sessionForAccountToSentTo = initiateFlow(targetDAnonParty)
+
         val accountToMoveToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAccountToSentTo, targetDAnonParty.owningKey))
         val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToMoveToSignature)
 
         // finalize
         progressTracker.currentStep =FINALISING_TRANSACTION
-        val fullySignedTx =  subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
-        return fullySignedTx
+        return subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
     }
 }
 
@@ -136,10 +124,9 @@ class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLog
             override fun checkTransaction(stx: SignedTransaction) {
             }
         }
-
         val transaction = subFlow(transactionSigner)
         if(otherSession.counterparty != serviceHub.myInfo.legalIdentities.first()) {
-            val receivedTx = subFlow(
+            subFlow(
                     ReceiveFinalityFlow(
                             otherSession,
                             expectedTxId = transaction.id,

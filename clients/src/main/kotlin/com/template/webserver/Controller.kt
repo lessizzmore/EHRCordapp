@@ -318,27 +318,18 @@ class Controller(rpc: NodeRPCConnection) {
 //
     @CrossOrigin(origins = ["http://localhost:4200"])
     @PostMapping(value = ["activate"])
-    fun activatePendingEHR (request: HttpServletRequest): ResponseEntity<SignedTransaction>? {
+    fun activatePendingEHR (request: HttpServletRequest): SignedTransaction {
         val whoIam = request.getParameter("whoIam")
         val whereTo = request.getParameter("whereTo")
 
         val ehrId = request.getParameter("ehrId")
         val ehrState = UniqueIdentifier.fromString(ehrId)
-        return try {
-            val signedTx = proxy.startTrackedFlow(
-                    ::ActivateEHRFlow,
-                    whoIam,
-                    whereTo,
-                    ehrState).returnValue.getOrThrow()
-            ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(signedTx)
-
-        } catch (ex: Throwable) {
-            logger.error(ex.message, ex)
-            ResponseEntity.badRequest()
-        } as ResponseEntity<SignedTransaction>?
-
+        val signedTx = proxy.startTrackedFlow(
+                ::ActivateEHRFlow,
+                whoIam,
+                whereTo,
+                ehrState).returnValue.getOrThrow()
+        return signedTx
     }
 //
 //    @CrossOrigin(origins = ["http://localhost:4200"])
