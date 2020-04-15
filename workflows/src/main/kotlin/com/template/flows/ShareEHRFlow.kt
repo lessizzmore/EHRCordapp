@@ -39,7 +39,6 @@ class ShareEHRFlow(
         val myAccount = serviceHub.createKeyForAccount(myAccountStateAndRef.state.data)
         // doctor2 : observer
         val observerAccount = accountService.accountInfo(observer).single().state.data
-//        val observerAccountAnonParty = serviceHub.createKeyForAccount(observerAccount)
         val observerAccountAnonParty = subFlow(RequestKeyForAccount(observerAccount))
         // patient
         val targetPAccountStateAndRef = accountService.accountInfo(whereTo).single()
