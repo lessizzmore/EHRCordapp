@@ -7,6 +7,7 @@ import com.r3.corda.lib.tokens.contracts.utilities.heldBy
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.money.FiatCurrency.Companion.getInstance
 import com.r3.corda.lib.tokens.money.GBP
+import com.r3.corda.lib.tokens.money.USD
 import com.r3.corda.lib.tokens.workflows.flows.rpc.IssueTokens
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.FlowException
@@ -25,7 +26,7 @@ class CashIssue(
     @Suspendable
     @Throws(FlowException::class)
     override fun call(): String {
-        subFlow(IssueTokens(listOf(1_000_00.GBP issuedBy issuer heldBy recipient))) // Initiating version of IssueFlow
+        subFlow(IssueTokens(listOf(1_000_00.USD issuedBy issuer heldBy recipient))) // Initiating version of IssueFlow
         return "success"
     }
 
