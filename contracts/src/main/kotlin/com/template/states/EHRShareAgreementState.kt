@@ -60,7 +60,7 @@ data class EHRShareAgreementState(
 @CordaSerializable
 enum class EHRShareAgreementStateStatus(s: String) {
     PENDING ("pending"),
-    ACTIVE("active"),
+    APPROVED("approved"),
     REJECTED("rejected"),
     SHARED("shared")
 }

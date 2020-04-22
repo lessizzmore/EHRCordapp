@@ -2,12 +2,9 @@ package com.template.flows.token
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.flows.move.addMoveNonFungibleTokens
 import com.r3.corda.lib.tokens.workflows.flows.move.addMoveTokens
 import com.r3.corda.lib.tokens.workflows.internal.flows.distribution.UpdateDistributionListFlow
-import com.r3.corda.lib.tokens.workflows.internal.flows.finality.ObserverAwareFinalityFlow
-import com.r3.corda.lib.tokens.workflows.utilities.ourSigningKeys
 import com.template.states.EHRTokenState
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.UniqueIdentifier
@@ -44,29 +41,29 @@ class EHRSale(
         addMoveNonFungibleTokens(builder, serviceHub, ehrState.toPointer<EHRTokenState>(), buyer)
 
         val buyerSession = initiateFlow(buyer)
-        buyerSession.send(PriceNotification(ehrStateAndRef.state.data.price))
+        buyerSession.send(ehrState.price)
 
 
         val inputs = subFlow(ReceiveStateAndRefFlow<FungibleToken>(buyerSession))
         val outputs = buyerSession.receive<List<FungibleToken>>().unwrap { it }
         addMoveTokens(builder, inputs, outputs)
 
-        // subFlow(SyncKeyMappingFlow(session, txBuilder.toWireTransaction(serviceHub)))
-
         // Because states on the transaction can have confidential identities on them, we need to sign them with corresponding keys.
-        val ourSigningKeys = builder.toLedgerTransaction(serviceHub).ourSigningKeys(serviceHub)
-        val initialStx = serviceHub.signInitialTransaction(builder, signingPubKeys = ourSigningKeys)
+
+        /* Sign the transaction with your private */
+        val initialStx = serviceHub.signInitialTransaction(builder, ourIdentity.owningKey)
         // Collect signatures from the new house owner.
-        val stx = subFlow(CollectSignaturesFlow(initialStx, listOf(buyerSession), ourSigningKeys))
+        val stx = subFlow(CollectSignaturesFlow(initialStx, listOf(buyerSession)))
         //Update distribution list.
         subFlow(UpdateDistributionListFlow(stx))
         // Finalise transaction! If you want to have observers notified, you can pass optional observers sessions.
-        subFlow(ObserverAwareFinalityFlow(stx, listOf(buyerSession)))
+        subFlow(FinalityFlow(stx, listOf(buyerSession)))
 
-        return  "success"
+        return """
+            
+            The ehr is sold to ${buyer.name.organisation}
+            Transaction ID: ${stx.id}
+            """.trimIndent()
 
     }
 }
-
-@CordaSerializable
-data class PriceNotification(val amount: Amount<TokenType>)

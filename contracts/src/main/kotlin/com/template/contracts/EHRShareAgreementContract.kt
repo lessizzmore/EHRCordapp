@@ -15,7 +15,7 @@ class EHRShareAgreementContract : Contract {
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
         class Reject : TypeOnlyCommandData(), Commands
-        class Activate : TypeOnlyCommandData(), Commands
+        class Approve : TypeOnlyCommandData(), Commands
         class Share : TypeOnlyCommandData(), Commands
         class Delete : TypeOnlyCommandData(), Commands
     }
@@ -29,7 +29,7 @@ class EHRShareAgreementContract : Contract {
 
             is Commands.Create -> verifyCreate(tx, setOfSigners)
             is Commands.Reject -> verifyReject(tx, setOfSigners)
-            is Commands.Activate -> verifyActive(tx, setOfSigners)
+            is Commands.Approve -> verifyApprove(tx, setOfSigners)
             is Commands.Share -> verifyShare(tx, setOfSigners)
             is Commands.Delete -> verifyDelete(tx, setOfSigners)
             else -> throw IllegalArgumentException("Unrecognized command.")
@@ -57,14 +57,14 @@ class EHRShareAgreementContract : Contract {
         "Output state of a suspension transaction should be suspended" using (outputEHR.status != EHRShareAgreementStateStatus.PENDING)
     }
 
-    private fun verifyActive(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+    private fun verifyApprove(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
         val command = tx.commands.requireSingleCommand<Commands>()
         val output = tx.outputs.single {it.data is EHRShareAgreementState }
         val outputEHR = output.data as EHRShareAgreementState
         val inputEHR = tx.inputsOfType<EHRShareAgreementState>().single()
         //"Both participants should sign a activate transaction" using (command.signers.toSet() == setOf(outputEHR.participants.map { it.owningKey }.toSet()))
-        "Input state of a EHR activation transaction shouldn't be already active" using (inputEHR.status != EHRShareAgreementStateStatus.ACTIVE)
-        "Output state of a EHR activation transaction should be active" using (outputEHR.status == EHRShareAgreementStateStatus.ACTIVE)
+        "Input state of a EHR activation transaction shouldn't be already active" using (inputEHR.status != EHRShareAgreementStateStatus.APPROVED)
+        "Output state of a EHR activation transaction should be active" using (outputEHR.status == EHRShareAgreementStateStatus.APPROVED)
     }
 
     private fun verifyShare(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {

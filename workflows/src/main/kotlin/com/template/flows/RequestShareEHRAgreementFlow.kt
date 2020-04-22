@@ -10,6 +10,7 @@ import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
@@ -36,10 +37,10 @@ class RequestShareEHRAgreementFlow(
         val aboutWho: String,
         val note: String? = "",
         val attachmentId: String? = ""
-): FlowLogic<SignedTransaction>() {
+): FlowLogic<String>() {
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): String {
 
         // generate key for tx
         // doctor1
@@ -61,8 +62,9 @@ class RequestShareEHRAgreementFlow(
 
 
         // create state to transfer
+        val uuid = UniqueIdentifier.fromString(UUID.randomUUID().toString())
         val initialEHRShareAgreementState =
-                EHRShareAgreementState(AnonymousParty(myAccountKey), AnonymousParty(targetDKey), patientAcctAnonParty, note, attachmentId)
+                EHRShareAgreementState(AnonymousParty(myAccountKey), AnonymousParty(targetDKey), patientAcctAnonParty, note, attachmentId, linearId = uuid)
 
         // create tx, state + command
         val builder = TransactionBuilder(notary = notary)
@@ -81,7 +83,8 @@ class RequestShareEHRAgreementFlow(
         val signedByCounterParty = locallySignedTx.withAdditionalSignatures(accountToSendToSignature)
 
         // finalize
-        return subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAcctToSendTo).filter { it.counterparty != ourIdentity }))
+        subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAcctToSendTo).filter { it.counterparty != ourIdentity }))
+        return "$whoIam would like to share $aboutWho 's EHR with $whereTo. \n ehrId: $uuid"
     }
 }
 

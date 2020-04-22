@@ -15,8 +15,7 @@ import java.util.*
 data class EHRTokenState(
         val issuer: Party,
         val data: String,
-        val price: Amount<TokenType>,
-        val symbol: String,
+        val price: Amount<Currency>,
         override val maintainers: List<Party>,
         override val fractionDigits: Int = 0,
         override val linearId: UniqueIdentifier

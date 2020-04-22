@@ -30,7 +30,7 @@ class RejectEHRFlow(
         val whoIam: String,
         val whereTo: String,
         val ehrId: UniqueIdentifier
-) : FlowLogic<SignedTransaction>() {
+) : FlowLogic<String>() {
 
     companion object {
         object GENERATING_KEYS : ProgressTracker.Step("Generating Keys for transactions.")
@@ -61,7 +61,7 @@ class RejectEHRFlow(
 
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): String {
         // create a key for tx
         progressTracker.currentStep = GENERATING_KEYS
 
@@ -108,7 +108,8 @@ class RejectEHRFlow(
 
         // finalize
         progressTracker.currentStep =FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
+        subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
+        return "$whoIam rejects EHR sharing request. \n ehrId: ${ehrStateRefToReject.state.data.linearId.id}"
     }
 }
 

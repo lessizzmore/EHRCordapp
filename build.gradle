@@ -1,4 +1,5 @@
 buildscript {
+    ext.kotlin_version = '1.3.72'
     Properties constants = new Properties()
     file("$projectDir/./constants.properties").withInputStream { constants.load(it) }
 
@@ -118,6 +119,7 @@ dependencies {
     cordapp "$confidential_id_release_group:ci-workflows:$confidential_id_release_version"
     cordapp "$accounts_release_group:accounts-contracts:$accounts_release_version"
     cordapp "$accounts_release_group:accounts-workflows:$accounts_release_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 cordapp {
@@ -166,7 +168,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 
     }
     node {
-        name "O=PartyB,L=New York,C=US,CN=HospitalA"
+        name "O=PartyB,L=New York,C=US,CN=Hospital"
         p2pPort 10008
         rpcSettings {
             address("localhost:10009")
@@ -192,6 +194,19 @@ task installQuasar(type: Copy) {
     destinationDir rootProject.file("lib")
     from(configurations.quasar) {
         rename 'quasar-core(.*).jar', 'quasar.jar'
+    }
+}
+repositories {
+    mavenCentral()
+}
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 }
 

@@ -20,6 +20,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import java.lang.IllegalArgumentException
 
 @InitiatingFlow
 @StartableByRPC
@@ -28,10 +29,10 @@ class ShareEHRFlow(
         val whereTo: String,
         val observer: String,
         val ehrId: UniqueIdentifier
-): FlowLogic<SignedTransaction>() {
+): FlowLogic<String>() {
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): String {
 
         // generate keys for tx
         // doctor 1
@@ -53,6 +54,9 @@ class ShareEHRFlow(
                 Vault.StateStatus.UNCONSUMED, null)
         val ehrStateRefToShare = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.single()
         val ehrState = ehrStateRefToShare.state.data
+        if (ehrState.status == EHRShareAgreementStateStatus.REJECTED) {
+            throw IllegalArgumentException("Rejected EHR cannot be shared!\n ehrId: ${ehrState.linearId.id}")
+        }
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
 
@@ -71,7 +75,8 @@ class ShareEHRFlow(
         val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey))
 
         // finalize
-        return subFlow(FinalityFlow(locallySignedTx))
+        subFlow(FinalityFlow(locallySignedTx))
+        return "$whoIam shared $whereTo's EHR with $observer.\n ehrId: ${ehrState.linearId.id}"
 
     }
 }

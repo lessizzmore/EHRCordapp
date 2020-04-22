@@ -26,11 +26,11 @@ import net.corda.core.utilities.ProgressTracker
  */
 @StartableByRPC
 @InitiatingFlow
-class ActivateEHRFlow(
+class ApproveEHRFlow(
         val whoIam: String,
         val whereTo: String,
         val ehrId: UniqueIdentifier
-) : FlowLogic<SignedTransaction>() {
+) : FlowLogic<String>() {
 
     companion object {
         object GENERATING_KEYS : ProgressTracker.Step("Generating Keys for transactions.")
@@ -61,7 +61,7 @@ class ActivateEHRFlow(
 
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): String {
         // create a key for tx
         progressTracker.currentStep = GENERATING_KEYS
 
@@ -82,8 +82,8 @@ class ActivateEHRFlow(
                 Vault.StateStatus.UNCONSUMED, null)
         val ehrStateRefToActivate = serviceHub.vaultService.queryBy<EHRShareAgreementState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
 
-        val activateCommand = Command(
-                EHRShareAgreementContract.Commands.Activate(),
+        val approveCommand = Command(
+                EHRShareAgreementContract.Commands.Approve(),
                 listOf(ourIdentity.owningKey, targetDAnonParty.owningKey))
 
         // Create activation tx
@@ -91,8 +91,8 @@ class ActivateEHRFlow(
         progressTracker.currentStep = GENERATING_TRANSACTION
         val builder = TransactionBuilder(notary)
                 .addInputState(ehrStateRefToActivate)
-                .addOutputState(ehrStateRefToActivate.state.data.copy(status = EHRShareAgreementStateStatus.ACTIVE), EHRShareAgreementContract.EHR_CONTRACT_ID)
-                .addCommand(activateCommand)
+                .addOutputState(ehrStateRefToActivate.state.data.copy(status = EHRShareAgreementStateStatus.APPROVED), EHRShareAgreementContract.EHR_CONTRACT_ID)
+                .addCommand(approveCommand)
         builder.verify(serviceHub)
 
 
@@ -108,12 +108,14 @@ class ActivateEHRFlow(
 
         // finalize
         progressTracker.currentStep =FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
+        subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
+        return "$whoIam approves EHR sharing request. \n ehrId: ${ehrStateRefToActivate.state.data.linearId.id}"
+
     }
 }
 
-@InitiatedBy(ActivateEHRFlow::class)
-class ActivateEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<Unit>() {
+@InitiatedBy(ApproveEHRFlow::class)
+class ApproveEHRFlowResponder (private val otherSession: FlowSession) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
