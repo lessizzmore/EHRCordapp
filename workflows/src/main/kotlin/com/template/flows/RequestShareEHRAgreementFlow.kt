@@ -76,7 +76,7 @@ class RequestShareEHRAgreementFlow(
         // locally sign tx
         val locallySignedTx = serviceHub.signInitialTransaction(builder, listOfNotNull(ourIdentity.owningKey, myAccountKey))
 
-        // collect signaturesy
+        // collect signatures
         val sessionForAcctToSendTo = initiateFlow(patientAcctAnonParty)
 
         val accountToSendToSignature = subFlow(CollectSignatureFlow(locallySignedTx, sessionForAcctToSendTo, patientAcctAnonParty.owningKey))
@@ -84,6 +84,9 @@ class RequestShareEHRAgreementFlow(
 
         // finalize
         subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAcctToSendTo).filter { it.counterparty != ourIdentity }))
+
+        // share state and sync acct
+        subFlow(ShareStateSyncAcct(initialEHRShareAgreementState.linearId, patientAccount.host))
         return "$whoIam would like to share $aboutWho 's EHR with $whereTo. \n ehrId: $uuid"
     }
 }

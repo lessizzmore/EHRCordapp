@@ -109,6 +109,7 @@ class ApproveEHRFlow(
         // finalize
         progressTracker.currentStep =FINALISING_TRANSACTION
         subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
+        subFlow(ShareStateSyncAcct(ehrStateRefToActivate.state.data.linearId, targetDAccountStateAndRef.state.data.host))
         return "$whoIam approves EHR sharing request. \n ehrId: ${ehrStateRefToActivate.state.data.linearId.id}"
 
     }

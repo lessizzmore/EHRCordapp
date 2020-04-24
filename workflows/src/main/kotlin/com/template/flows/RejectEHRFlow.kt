@@ -109,6 +109,9 @@ class RejectEHRFlow(
         // finalize
         progressTracker.currentStep =FINALISING_TRANSACTION
         subFlow(FinalityFlow(signedByCounterParty, listOf(sessionForAccountToSentTo).filter { it.counterparty != ourIdentity }))
+
+        //sync
+        subFlow(ShareStateSyncAcct(ehrStateRefToReject.state.data.linearId, targetDAccountStateAndRef.state.data.host))
         return "$whoIam rejects EHR sharing request. \n ehrId: ${ehrStateRefToReject.state.data.linearId.id}"
     }
 }
