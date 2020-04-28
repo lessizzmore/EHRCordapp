@@ -26,7 +26,6 @@ import java.lang.IllegalArgumentException
 @StartableByRPC
 class ShareEHRFlow(
         val whoIam: String,
-        val whereTo: String,
         val observer: String,
         val ehrId: UniqueIdentifier
 ): FlowLogic<String>() {
@@ -42,8 +41,8 @@ class ShareEHRFlow(
         val observerAccount = accountService.accountInfo(observer).single().state.data
         val observerAccountAnonParty = subFlow(RequestKeyForAccount(observerAccount))
         // patient
-        val targetPAccountStateAndRef = accountService.accountInfo(whereTo).single()
-        val targetPAnonParty =  subFlow(RequestKeyForAccount(targetPAccountStateAndRef.state.data))
+//        val targetPAccountStateAndRef = accountService.accountInfo(whereTo).single()
+//        val targetPAnonParty =  subFlow(RequestKeyForAccount(targetPAccountStateAndRef.state.data))
 
 
 
@@ -76,7 +75,7 @@ class ShareEHRFlow(
 
         // finalize
         subFlow(FinalityFlow(locallySignedTx))
-        return "$whoIam shared $whereTo's EHR with $observer.\n ehrId: ${ehrState.linearId.id}"
+        return "$whoIam shared ehrId: ${ehrState.linearId.id} with $observer"
 
     }
 }

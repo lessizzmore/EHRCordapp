@@ -357,7 +357,7 @@ class Controller(rpc: NodeRPCConnection) {
 //    }
 
 
-    @RequestMapping(value = ["/request"], headers = ["Content-Type=application/json"])
+    @PostMapping(value = ["/request"])
     private fun request(request: HttpServletRequest): ResponseEntity<String> {
         val d1 = request.getParameter("whoIam")
         val d2 = request.getParameter("whereTo")
@@ -460,7 +460,6 @@ class Controller(rpc: NodeRPCConnection) {
     @PostMapping(value = ["/share"])
     fun shareEHR (request: HttpServletRequest): ResponseEntity<String> {
         val whoIam = request.getParameter("whoIam")
-        val whereTo = request.getParameter("whereTo")
         val observer = request.getParameter("observer")
         val ehrId = request.getParameter("ehrId")
         val ehrState = UniqueIdentifier.fromString(ehrId)
@@ -468,7 +467,6 @@ class Controller(rpc: NodeRPCConnection) {
             val signedTx = proxy.startTrackedFlow(
                     ::ShareEHRFlow,
                     whoIam,
-                    whereTo,
                     observer,
                     ehrState).returnValue.getOrThrow()
             ResponseEntity
@@ -519,7 +517,7 @@ class Controller(rpc: NodeRPCConnection) {
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
-    @PostMapping(value = ["/issue-ehr"])
+    @PostMapping(value = ["/issue-ehr-token"])
     fun issueEHR (request: HttpServletRequest): ResponseEntity<String> {
         val owner = request.getParameter("owner")
         val data = request.getParameter("data")
