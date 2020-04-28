@@ -3,7 +3,6 @@ package com.template.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.accounts.workflows.accountService
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount
-import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts
 import com.r3.corda.lib.accounts.workflows.internal.flows.createKeyForAccount
 import com.template.contracts.EHRShareAgreementContract
 import com.template.states.EHRShareAgreementState

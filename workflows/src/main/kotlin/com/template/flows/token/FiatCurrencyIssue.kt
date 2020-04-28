@@ -38,7 +38,9 @@ class FiatCurrencyIssue(
 
         subFlow(IssueTokens(listOf(fungibleToken), listOf(recipient)))
 
-        return "$ourIdentity issued $amount $currency to $recipient."
+        val realAmount = amount / 100
+
+        return "$ourIdentity issued $realAmount $currency to $recipient."
     }
 
 }

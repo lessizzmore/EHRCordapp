@@ -6,22 +6,19 @@ import com.r3.corda.lib.tokens.workflows.flows.move.addMoveNonFungibleTokens
 import com.r3.corda.lib.tokens.workflows.flows.move.addMoveTokens
 import com.r3.corda.lib.tokens.workflows.internal.flows.distribution.UpdateDistributionListFlow
 import com.template.states.EHRTokenState
-import net.corda.core.contracts.Amount
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
-import java.util.*
 
 @StartableByRPC
 @InitiatingFlow
 class EHRSale(
-        val ehrId: UniqueIdentifier,
+        val tokenId: UniqueIdentifier,
         val buyer: Party
         ) : FlowLogic<String>() {
 
@@ -31,10 +28,11 @@ class EHRSale(
 
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(
                 null,
-                listOf(ehrId),
-                Vault.StateStatus.UNCONSUMED, null)
+                listOf(tokenId),
+                Vault.StateStatus.UNCONSUMED,
+                null)
         val ehrStateAndRef =
-                serviceHub.vaultService.queryBy<EHRTokenState>(queryCriteria).states.singleOrNull()?: throw FlowException("EHRShareAgreementState with id $ehrId not found.")
+                serviceHub.vaultService.queryBy<EHRTokenState>(queryCriteria).states.last()
         val ehrState = ehrStateAndRef.state.data
         val builder = TransactionBuilder(notary)
 

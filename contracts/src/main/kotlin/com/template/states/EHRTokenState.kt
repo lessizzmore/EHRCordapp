@@ -5,6 +5,7 @@ import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.template.contracts.EHRContract
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
 import java.math.BigDecimal
