@@ -1,5 +1,7 @@
 package com.template.webserver
 
+import com.r3.corda.lib.tokens.contracts.states.FungibleToken
+import com.r3.corda.lib.tokens.contracts.states.NonFungibleToken
 import com.template.flows.*
 import com.template.flows.token.CreateAndIssueEHR
 import com.template.flows.token.EHRSale
@@ -81,19 +83,52 @@ class Controller(rpc: NodeRPCConnection) {
 
     @CrossOrigin(origins = ["http://localhost:4200"])
     @PostMapping(value = ["/create-account"])
-    private fun createNewAccount(@RequestParam accountName:String): String {
-        val result = proxy.startFlowDynamic(CreateNewAccount::class.java, accountName).returnValue.get()
-        return result
+    private fun createNewAccount( request: HttpServletRequest): ResponseEntity<String> {
+        val accountName = request.getParameter("accountName")
+                ?: return ResponseEntity.badRequest().body("Query parameter 'accountName' must not be null.\n")
+
+        return try {
+            val signedTx = proxy.startTrackedFlow(
+                    ::CreateNewAccount,
+                    accountName
+                    ).returnValue.getOrThrow()
+            ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(signedTx)
+        }catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
     @PostMapping(value = ["/share-account"])
     private fun shareAccount(
-            @RequestParam accountName:String, @RequestParam shareTo: String): String {
+            request: HttpServletRequest): ResponseEntity<String> {
+        val accountName = request.getParameter("accountName")
+        val shareTo = request.getParameter("shareTo")
+
+        if(accountName == null){
+            return ResponseEntity.badRequest().body("Query parameter 'accountName' must not be null.\n")
+        }
+        if(shareTo == null){
+            return ResponseEntity.badRequest().body("Query parameter 'shareTo' must not be null.\n")
+        }
+
         val sharedTo = proxy.partiesFromName(shareTo, false).singleOrNull()
                 ?:throw  IllegalArgumentException("No exact match found for Party name ${shareTo}.")
-        val result = proxy.startFlowDynamic(ShareAccount::class.java, accountName, sharedTo).returnValue.get()
-        return result
+        return try {
+            val signedTx = proxy.startTrackedFlow(
+                    ::ShareAccount,
+                    accountName,
+                    sharedTo).returnValue.getOrThrow()
+            ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(signedTx)
+        }catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
     }
 
 //    @CrossOrigin(origins = ["http://localhost:4200"])
@@ -545,6 +580,36 @@ class Controller(rpc: NodeRPCConnection) {
                     .status(HttpStatus.OK)
                     .body(signedTx)
         }catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
+    }
+
+    @GetMapping(value= ["fungible-tokens"])
+    fun getFungibleTokens(request: HttpServletRequest): ResponseEntity<Any?> {
+        return try {
+            val stateRefs = proxy.vaultQueryBy<FungibleToken>().states
+            val states = ArrayList<FungibleToken>()
+            stateRefs.forEach {
+                states.add(it.state.data)
+            }
+            ResponseEntity.status(HttpStatus.OK).body(states)
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            ResponseEntity.badRequest().body(ex.message!!)
+        }
+    }
+
+    @GetMapping(value= ["nonfungible-tokens"])
+    fun getnonFungibleTokens(request: HttpServletRequest): ResponseEntity<Any?> {
+        return try {
+            val stateRefs = proxy.vaultQueryBy<NonFungibleToken>().states
+            val states = ArrayList<NonFungibleToken>()
+            stateRefs.forEach {
+                states.add(it.state.data)
+            }
+            ResponseEntity.status(HttpStatus.OK).body(states)
+        } catch (ex: Throwable) {
             logger.error(ex.message, ex)
             ResponseEntity.badRequest().body(ex.message!!)
         }
