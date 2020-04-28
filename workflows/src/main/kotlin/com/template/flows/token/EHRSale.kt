@@ -60,7 +60,6 @@ class EHRSale(
         subFlow(FinalityFlow(stx, listOf(buyerSession)))
 
         return """
-            
             The ehr is sold to ${buyer.name.organisation}
             Transaction ID: ${stx.id}
             """.trimIndent()

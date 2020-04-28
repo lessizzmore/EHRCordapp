@@ -73,7 +73,6 @@ class ApproveEHRFlow(
         val targetDAccountStateAndRef = accountService.accountInfo(whereTo).single()
         val targetDAnonParty =  subFlow(RequestKeyForAccount(targetDAccountStateAndRef.state.data))
 
-
         // get input state
         progressTracker.currentStep = GET_STATE
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(

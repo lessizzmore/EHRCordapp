@@ -14,7 +14,7 @@ import java.util.*
 @BelongsToContract(EHRContract::class)
 data class EHRTokenState(
         val issuer: Party,
-        val data: String,
+        val data: String?="",
         val price: Amount<Currency>,
         override val maintainers: List<Party>,
         override val fractionDigits: Int = 0,

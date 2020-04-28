@@ -42,6 +42,8 @@ class RequestShareEHRAgreementFlow(
     @Suspendable
     override fun call(): String {
 
+
+
         // generate key for tx
         // doctor1
         val myAccount = accountService.accountInfo(whoIam).single().state.data
