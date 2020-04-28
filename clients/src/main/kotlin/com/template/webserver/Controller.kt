@@ -357,7 +357,7 @@ class Controller(rpc: NodeRPCConnection) {
 //    }
 
 
-    @RequestMapping(value = ["request"], headers = ["Content-Type=application/json"])
+    @RequestMapping(value = ["/request"], headers = ["Content-Type=application/json"])
     private fun request(request: HttpServletRequest): ResponseEntity<String> {
         val d1 = request.getParameter("whoIam")
         val d2 = request.getParameter("whereTo")
@@ -585,7 +585,7 @@ class Controller(rpc: NodeRPCConnection) {
         }
     }
 
-    @GetMapping(value= ["fungible-tokens"])
+    @GetMapping(value= ["/fungible-tokens"])
     fun getFungibleTokens(request: HttpServletRequest): ResponseEntity<Any?> {
         return try {
             val stateRefs = proxy.vaultQueryBy<FungibleToken>().states
@@ -600,7 +600,7 @@ class Controller(rpc: NodeRPCConnection) {
         }
     }
 
-    @GetMapping(value= ["nonfungible-tokens"])
+    @GetMapping(value= ["/nonfungible-tokens"])
     fun getnonFungibleTokens(request: HttpServletRequest): ResponseEntity<Any?> {
         return try {
             val stateRefs = proxy.vaultQueryBy<NonFungibleToken>().states
