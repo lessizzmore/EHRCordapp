@@ -116,7 +116,7 @@ class Controller(rpc: NodeRPCConnection) {
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
-    @GetMapping(value = ["ehrs"])
+    @GetMapping(value = ["all-ehrs"])
     private fun getEHRs(): ResponseEntity<Any?> {
         return try {
             val stateRefs = proxy.vaultQueryBy<EHRShareAgreementState>().states
@@ -149,7 +149,7 @@ class Controller(rpc: NodeRPCConnection) {
     }
 
     @CrossOrigin(origins = ["http://localhost:4200"])
-    @GetMapping(value = ["/ehrs"])
+    @GetMapping(value = ["ehrs"])
     private fun getEHRsByAccount(request: HttpServletRequest): ResponseEntity<Any?> {
             val accountName = request.getParameter("acctname")
             return try {
